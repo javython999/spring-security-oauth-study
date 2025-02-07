@@ -11,12 +11,19 @@ import static org.springframework.security.config.Customizer.withDefaults;
 public class SecurityConfig {
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
-            .formLogin(withDefaults());
+    SecurityFilterChain securityFilterChain1(HttpSecurity http) throws Exception {
+        http.authorizeHttpRequests(auth -> auth.anyRequest().authenticated());
+        http.formLogin(withDefaults());
+        http.httpBasic(withDefaults());
 
-        new CustomSecurityConfigurer().setFlag(true).configure(http);
+        // 커스텀 생성시 가장 우선이 된다.
+        http.exceptionHandling(ex -> ex
+                .authenticationEntryPoint((request, response, authException) -> {
+                    System.out.println("custom entry point");
+            })
+        );
 
         return http.build();
     }
+
 }
