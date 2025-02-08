@@ -27,3 +27,35 @@
 * Spring Security는 초기화때 인증방식 2개(formLogin, httpBasic)를 설정한다.
 * 인증 예외 발생시 `ExceptionHandlingConfigurer`가 `AuthenticationEntryPoint` 클래스를 통해서 처리한다.
 * 커스텀 엔트리포인트가 생성되면 formLogin, httpBasic의 defaultEntryPoint 보다 우선 적용된다.
+
+### 시큐리티 인증 및 인가 흐름 요약
+* 인증
+```mermaid
+sequenceDiagram
+    사용자 요청->>DelegatingFilterProxy: 사용자 요청
+    DelegatingFilterProxy ->> FilterChainProxy: springSecurityFilterChain 빈을 찾아 요청 위임
+    FilterChainProxy ->> AuthenticationFilter: AuthenticationFilter에게 인증 위임
+    AuthenticationFilter ->> Authentication: 사용자로부터 받은 정보를 Authentication에 저장 
+    AuthenticationFilter ->> AuthenticationManager: Authentication 인증을 AuthenticationManager에게 위임
+   
+    AuthenticationManager ->> AuthenticationProvider: 인증처리를 할 수 있는 클래스를 찾고 Authentication 인증을 위임 
+    AuthenticationProvider ->> UseDetailService: 유저 정보 조회
+    UseDetailService ->> UserDetails: 유저 정보가 있는 경우 UserDetails 생성
+    UserDetails ->> AuthenticationProvider: UserDetails 반환
+    AuthenticationProvider ->> AuthenticationFilter: Authenticatio 객체를 만들고 반환
+    AuthenticationFilter ->> SecurityContext: SecurityContext에 인증 정보 저장
+```
+
+* 인가
+```mermaid
+sequenceDiagram
+    사용자 요청 ->> DelegatingFilterProxy: 사용자 요청
+    DelegatingFilterProxy ->> FilterChainProxy: springSecurityFilterChain 빈을 찾아 요청 위임
+    FilterChainProxy ->> AuthenticationFilter: AuthenticationFilter에게 인증 위임
+    AuthenticationFilter ->> ExceptionTranslationFilter: 인증/인가 예외 처리
+    ExceptionTranslationFilter ->> FilterSecurityInterceptor: 인가 처리
+    FilterSecurityInterceptor ->> AccessDecisionManager: 인가 처리 위임
+    AccessDecisionManager ->> AccessDecisionVoter: 인가 판단
+    AccessDecisionVoter ->> AccessDecisionManager: 인가 결과 반환
+    AccessDecisionManager ->> ExceptionTranslationFilter: 인증/인가 예외 처리
+```
