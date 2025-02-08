@@ -14,9 +14,7 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
             .formLogin(withDefaults());
-
-        new CustomSecurityConfigurer().setFlag(true).configure(http);
-
+        //new CustomSecurityConfigurer().setFlag(true).configure(http);
         return http.build();
     }
 }
