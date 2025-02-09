@@ -28,7 +28,7 @@
 * 인증 예외 발생시 `ExceptionHandlingConfigurer`가 `AuthenticationEntryPoint` 클래스를 통해서 처리한다.
 * 커스텀 엔트리포인트가 생성되면 formLogin, httpBasic의 defaultEntryPoint 보다 우선 적용된다.
 
-### 시큐리티 인증 및 인가 흐름 요약
+## 시큐리티 인증 및 인가 흐름 요약
 * 인증
 ```mermaid
 sequenceDiagram
@@ -58,4 +58,37 @@ sequenceDiagram
     AccessDecisionManager ->> AccessDecisionVoter: 인가 판단
     AccessDecisionVoter ->> AccessDecisionManager: 인가 결과 반환
     AccessDecisionManager ->> ExceptionTranslationFilter: 인증/인가 예외 처리
+```
+
+## Http Basic 인증
+```mermaid
+sequenceDiagram
+   Client ->> Server: 인증정보 없이 접속
+   Server ->> Client: 401 Unauthorized 응답 (헤더에 realm과 인증방법)
+   Client ->> Server: Base64로 인코딩하고 Authorization 헤더에 담아 요청
+   Server ->> Client: 200 Ok 응답
+```
+* base64 인코딩된 값은 쉽게 디코딩이 가능하기 때문에 인증정보가 노출된다.
+* Http Basic 인증은 반드시 HTTPS와 같이 TLS 기술과 함께 사용해야 한다.
+
+### HttpBasicConfigurer
+* HttpBasic 인증에 대한 초기화를 진행하며 속성들에 대한 기본값들을 설정한다.
+* 기본 AuthenticationEntryPoint는 BasicAuthenticationEntryPoint다.
+* 필터는 BasicAuthenticationFilter를 사용한다.
+
+### BasicAuthenticationFilter
+* 이 필터는 기본 인증 서비스를 제공하는 데 사용된다.
+* BasicAuthenticationConverter를 사용해서 요청 헤더에 기술된 인증정보의 유효성을 체크하며 Base64 인코딩된 username과 password를 추출한다.
+* 인증이 성공하면 Authentication이 SecurityContext에 저장되고 인증이 실패하면 Basic 인증을 통해 다시 인증하라는 메시지를 표시하는 BasicAuthenticationEntryPoint가 호출된다.
+* 인증 이후 세션을 사용하는 경우와 사용하지 않는 경우에 따라 처리되는 흐름에 차이가 있다. 세션을 사용하는 경우 매 요청 마다 인증과정을 거치지 않으나 세션을 사용하지 않는 경우 매 요청마다 인증과정을 거쳐야 한다.
+
+### API
+```java
+protected void configure(final HttpSecurity http) throws Exception {
+    http.authorizeRequests()
+         .anyRequest().authenticated()
+            .and()
+            .httpBasic()
+            .authenticationEntryPoint(new CustomAuthenticationEntryPoint());
+}
 ```
