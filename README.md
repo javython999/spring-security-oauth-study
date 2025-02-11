@@ -177,3 +177,43 @@ public CorsConfigurationSource corsConfigurationSource() {
     return source;
 }
 ```
+# OAuth 2.0 용어 이해
+## OAuth 2.0
+* `O`pen + `Auth`orization
+* OAuth 2.0 인가 프레임워크는 애플리케이션이 사용자 대신하여 사용자의 자원에 대한 제한된 액세스를 얻기 위해 승인 상호 작용을 함으로써 애플리케이션이 자체적으로 액세스 권한을 얻도록 한다.
+* 즉 사용자가 속한 사이트의 보호된 자원에 대하여 애플리케이션의 접근을 허용하도록 승인하는 것을 의미한다.
+* Delegated authorization framework - 위임 인가 프레임워크
+
+## OAuth2 오픈소스 keyCloak 
+### keycloak
+* ID 및 접근 관리를 지원하는 인가서버 오픈 소스로 사용자 연합, 강력한 인증, 사용자 관리, 세분화된 권한 부여 등을 제공한다.
+
+## OAuth 2.0 Roles 이해
+OAuth 2.0 메커니즘은 다음 네가지 종류의 역할을 담당하는 주체들에 의해 이루어지는 권한 부여 체계이다.
+
+1. Resource Owner(자원 소유자)
+   * 보호된 자원에 대한 접근 권한을 부여할 수 있는 주체, 사용자로서 계정의 일부에 대한 접근 권한을 부여하는 사람
+   * 사용자를 대신하여 작동하려는 모든 클라이언트는 먼저 사용자의 허가를 받아야 한다.
+
+2. Resource Server(보호자원서버)
+   * 타사 애플리케이션에서 접근하는 사용자의 자원이 포함된 서버를 의미한다.
+   * 액세스 토큰을 수락 및 검증할 수 있어야 하며 권한 체계에 따라 요청을 승인할 수 있어야 한다.
+
+3. Authorization Server(인가서버)
+   * 클라이언트가 사용자 계정에 대한 동의 및 접근을 요청할 때 상호작용하는 서버로서 클라이언트의 권한 부여 요청을 승인하거나 거부하는 서버
+   * 사용자가 클라이언트에게 권한 부여 요청을 승인한 후 access token을 클라이언트에게 부여하는 역할
+
+4. Client(클라이언트)
+   * 사용자를 대신하여 권한을 부여받아 사용자의 리소스에 접근하려는 애플리케이션
+   * 사용자를 권한 부여 서버로 안내하거나 사용자의 상호 작용 없이 권한 부여 서버로부터 직접 권한을 얻을 수 있다.
+
+
+```mermaid
+sequenceDiagram
+    Resource Owner ->> Client: 권한 부여 요청 및 승인
+    Client ->> Resource Owner: 권한 부여 요청 및 승인
+    Client ->> Authorization Server: access token 요청
+    Authorization Server ->> Client: access token 발행
+    Client ->> Resource Server: 리소스 요청 with access token
+    Resource Server ->> Authorization Server: access token 검증
+```
