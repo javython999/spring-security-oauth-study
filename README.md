@@ -383,3 +383,36 @@ sequenceDiagram
     AuthorizationServer ->> ResourceServer: 12. AccessToken 검증완료
     ResourceServer ->> Client: 13. 요청한 데이터 응답
 ```
+
+## Implicit Grant
+### 개요
+1. 흐름 및 특징
+   * 클라이언트 javascript 및 Html 소스 코드를 다운로드한 후 브라우저는 서비스에 직접 API 요청을 한다.
+   * 코드 교환 단계를 건너뛰고 대신 액세스 토큰이 쿼리 문자열 조각으로 클라이언트에 즉시 반환된다.
+   * 이 유형은 back channel이 없으므로 refresh token을 사용하지 못한다.
+   * 토큰 말료시 애플리케이션이 새로운 access token을 얻으려면 다시 OAuth 승인 과정을 거쳐야 한다.
+
+2. 권한 부여 승인 요청시 매개변수
+   * grant_type=token(필수), id_token
+   * client_id(필수)
+   * redirect_uri(필수: 리다이렉션 uri 초기 승인 요청에 포함된 경우)
+   * scope(선택사항)
+   * state(선택사항)
+
+### 흐름
+1. Access Token 요청
+
+```mermaid
+sequenceDiagram
+    ResourceOwner ->> Client: 1. 서비스 접속
+    Client ->> AuthorizationServer: 2. AccessToken 요청
+    AuthorizationServer ->> ResourceOwner: 3. 로그인 요청
+    ResourceOwner ->> AuthorizationServer: 4. 로그인 
+    AuthorizationServer ->> ResourceOwner: 5. Consent(동의) 요청
+    ResourceOwner ->> AuthorizationServer: 6. 동의
+    AuthorizationServer ->> Client: 7. AccessToken 응답
+    Client ->> AuthorizationServer: 8. AccessToken 검증
+    AuthorizationServer ->> Client: 9. AccessToken 검증완료
+    Client ->> ResourceServer: 10. AccessToken으로 API 호출
+    ResourceServer ->> Client: 11. 요청한 데이터 응답
+```
