@@ -339,3 +339,47 @@ flowchart LR
 7. state
    * 응용 프로그램은 임의의 문자열을 생성하고 요청에 포함하고 사용자가 앱을 승인한 후 서버로부터 동일한 값이 반환되는지 확인해야 한다.
    * 이것은 CSRF 공격을 방지하는데 사용된다.
+
+## Authorization Code Grant - 권한 부여 코드 승인 방식
+### 개요
+1. 흐름 및 특징
+    1) 사용자가 애플리케이션을 승인하면 인가서버는 Redirect URI로 임시 코드를 담아서 애플리케이션으로 다시 리다이렉션 한다.
+    2) 애플리케이션은 해당 코드를 인가 서버로 전달하고 액세스 토큰으로 교환한다.
+    3) 애플리케이션이 액세스 토큰을 요청할 대 해당 요청을 클라이언트 암호로 인증할 수 있으므로 공격자가 인증 코드를 가로채서 스스로 사용할 위험이 줄어 든다.
+    4) 액세스 토큰이 사용자 또는 브라우저에 표시되지 않고 애플리케이션에 다시 전달하는 가장 안전한 방법이므로 토큰이 다른 사람에게 누출될 위험이 줄어듬
+
+2. 권한부여 요청 시 매개변수
+    * response_type=code(필수)
+    * client_id(필수)
+    * redirect_uri(선택사항)
+    * scope(선택사항)
+    * state(선택사항)
+
+3. 액세스 토큰 쿄환 요청 시 매개변수
+    * grant_type=authorization_code(필수)
+    * code(필수)
+    * redirect_uri(필수: 리다이렉션 uri 초기 승인 요청에 포함된 경우)
+    * client_id(필수)
+    * client_secret(필수)
+
+### 흐름
+1. authorization code 요청: 인가서버에게 code를 요청한다.
+2. 사용자 인증 & 동의하기: 사용자의 승인 및 동의하에 인가서버가 클라이언트에게 코드를 발급
+3. Redirect 및 Access Token 교환 요청: 클라이언트의 권한부여가 승인되고 그 결과로 토큰을 획득
+
+```mermaid
+sequenceDiagram
+    ResourceOwner ->> Client: 1. 서비스 접속
+    Client ->> AuthorizationServer: 2. authorization code(권한부여 코드)요청
+    AuthorizationServer ->> ResourceOwner: 3. 로그인 요청
+    ResourceOwner ->> AuthorizationServer: 4. 로그인 
+    AuthorizationServer ->> ResourceOwner: 5. Consent(동의) 요청
+    ResourceOwner ->> AuthorizationServer: 6. 동의
+    AuthorizationServer ->> Client: 7. authorization code(권한부여 코드) 응답 리다이렉트
+    Client ->> AuthorizationServer: 8. AccessToken 교환 요청
+    AuthorizationServer ->> Client: 9. AccessToken + RefreshToken 응답
+    Client ->> ResourceServer: 10. AccessToken으로 API 호출
+    ResourceServer ->> AuthorizationServer: 11. AccessToken 검증
+    AuthorizationServer ->> ResourceServer: 12. AccessToken 검증완료
+    ResourceServer ->> Client: 13. 요청한 데이터 응답
+```
