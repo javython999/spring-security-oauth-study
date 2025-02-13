@@ -416,3 +416,118 @@ sequenceDiagram
     Client ->> ResourceServer: 10. AccessToken으로 API 호출
     ResourceServer ->> Client: 11. 요청한 데이터 응답
 ```
+
+## Resource Owner Password Credentials Grant
+### 개요
+1. 흐름 및 특징
+   * 애플리케이션이 사용자 이름과 암호를 액세스 토큰으로 교환할 때 사용된다.
+   * 타사 애플리케이션이 이 권한을 사용하도록 허용해서는 안되고 고도의 신뢰할 자사 애플리케이션에서만 사용해야 한다.
+   
+2. 권한 부여 승인 요청 시 매개변수
+   * grant_type=password(필수)
+   * username(필수)
+   * password(필수)
+   * client_id(필수)
+   * client_secret(필수)
+   * scope(선택사항)
+
+### 흐름
+1. Access Token 요청
+```mermaid
+sequenceDiagram
+    ResourceOwner ->> Client: 1. 서비스 접속
+    Client ->> AuthorizationServer: 2. 인증정보(username, password)를 포함해 AccessToken 요청
+    AuthorizationServer ->> Client: 3. AccessToken 응답
+    Client ->> ResourceServer: 4. AccessToken으로 API 호출
+    ResourceServer ->> AuthorizationServer: 5. AccessToken 검증
+    AuthorizationServer ->> ResourceServer: 6. AccessToken 검증완료
+    ResourceServer ->> Client: 7. 요청한 데이터 응답
+```
+
+## Client Credentials Grant Type
+### 개요
+1. 흐름 및 특징
+   * 애플리케이션이 리소스 소유자인 동시에 클라이언트의 역할을 한다.
+   * 리소스 소유자에게 권한 위임을 받아 리소스에 접근하는 것이 아니라 자기 자신이 애플리케이션을 사용할 목적으로 사용하는 것
+   * 서버 대 서버간의 통신에서 사용할 수 있으며 IOT와 같은 장비 애플리케이션과 통신을 위한 인증으로도 사용할 수 있다.
+   * Client Id와 Client Secret을 통해 액세스 토큰을 바로 발급받을 수 있다.
+   * Client 정보를 기반으로 하기 때문에 사용자 정보를 제공하지 않는다.
+   
+2. 권한 부여 승인 요청 시 매개변수
+    * grant_type=client_credentials(필수)
+    * client_id(필수)
+    * client_secret(필수)
+    * scope(선택사항)
+
+```mermaid
+sequenceDiagram
+    Client ->> AuthorizationServer: 1. AccessToken 요청
+    AuthorizationServer ->> Client: 2. AccessToken 응답
+    Client ->> ResourceServer: 3. AccessToken으로 API 호출
+    ResourceServer ->> AuthorizationServer: 4. AccessToken 검증
+    AuthorizationServer ->> ResourceServer: 5. AccessToken 검증완료
+    ResourceServer ->> Client: 6. 요청한 데이터 응답
+```
+
+## Refresh Token Grant
+### 개요
+1. 흐름 및 특직
+   * 액세스 토큰이 발급될 때 함께 제공되는 토큰으로 액세스 토큰이 만료되더라도 함께 발급받았던 리프레시 토큰이 유효하다면 인증 과정을 처음부터 반복하지 않고 액세스 토큰을 재발급 받을 수 있다.
+   * 한 번 사용된 리프레시 토큰은 폐기되거나 재사용할 수 있다.
+
+2. 권한 부여 승인 요청 시 매개변수
+   * grant_type=refresh_token(필수)
+   * refresh_token
+   * client_id(필수)
+   * client_secret(필수)
+
+```mermaid
+sequenceDiagram
+    Client ->> ResourceServer: 1. AccessToken으로 API 호출
+    ResourceServer ->> Client: 2. AccessToken 만료
+    Client ->> AuthorizationServer: 3. RefreshToken으로 AccessToken 갱신 요청
+    AuthorizationServer ->> Client: 4. AccessToken 갱신
+    Client ->> ResourceServer: 5. AccessToken으로 API 호출
+    ResourceServer ->> AuthorizationServer: 6. AccessToken 검증
+    AuthorizationServer ->> ResourceServer: 7. AccessToken 검증완료
+    ResourceServer ->> Client: 8. 요청한 데이터 응답
+    
+```
+
+## PKCE-enhanced Authorization Code Grant Type
+### PKCE(Proof Key for Code Exchange, RFC-6749) 개요
+* 코드 교환을 위한 증명 키로서 CSRF 및 권한부여코드 삽입 공격을 방지하기 위한 Authorization Code Grant Flow의 확장버전이다.
+* 권한부여코드 요청시 Code Verifier와 Code Challenge를 추가하여 만약 Authorization Code Grant Flow에서 Authorization Code가 탈취 당했을 때 AccessToken을 발급하지 못하도록 차단한다.
+* PKCE는 모바일 앱에서 Authorization Code Grant Flow를 보호하도록 설계되었으며, 나중에 SPA에서도 사용하도록 권장되었으며 모든 OAuth2 클라이언트에서 유용하다.
+
+### 코드 생성
+1. Code Verifier
+   1) 권한부여코드 요청 전에 애플리케이션이 원래 생성한 PKCE 요청에 대한 코드 검증기
+   2) 48~128글자수를 가진 무작위 문자열
+   3) A-Z, a-z, 0-9, -._~의 ASCII 문자들로만 구성됨
+2. Code Challenge
+   1) 선택한 Hash 알고리즘으로 Code Verifier를 Hashing 한 후 Base64 인코딩을 한 값
+   2) ex) Base64Encode(Sha256(ASCII(Code Verifier)))
+3. Code Challenge Method
+   1) plain - Code Verifier가 특정 알고리즘을 사용하지 않도록 설정
+   2) S256 - Code Verifier가 해시 알고리즘을 사용하도록 설정
+
+### 처리 흐름
+1. 단계
+   1) 클라이언트는 code_verifier를 생성하고, code_challenge_method를 사용하요 code_challenge를 계산한다.
+   2) 클라이언트가 /authorize에 대한 요청을 작성한다.
+   3) 권한 서버가 /authorize에 대한 표준 OAutho2 요청 유효성 검증을 수행한다.
+   4) 권한 서버가 code_challenge 및 code_challenge_method의 존재를 확인한다.
+   5) 권한 서버가 권한 코드에 대해 code_challenge 및 code_challenge_method를 저장한다.
+   6) 권한 서버가 권한 코드를 응답한다.
+2. 단계
+   7) 클라이언트가 code_verifier를 포함해 권한 코드를 /token에 제공한다.
+   8) 권한 서버가 /token에 대한 표준 OAuth2 요청 유효성 검증을 수행한다.
+   9) 권한 서버가 제공된 code_verifier 및 저장된 code_challenge_method를 사용하요 고유 code_challenge를 생성한다.
+   10) 권한 서버가 생성된 code_challenge를 /authorize에 대한 초기 요청에 제공된 값과 비교한다.
+   11) 두 값이 일치하면 액세스 토큰이 발행되고 일치하지 않으면 요청이 거부된다.
+
+### code_challenge_method 검증
+1. 권한 부요 코드 흐름에 있어 인가서버는 code_verifier를 검증하기 위해 code_challenge_method를 이미 알고 있어야 한다.
+2. 토큰 교환시 code_challenge_method가 plain이면 인가서버는 전달된 code_verifier와 보관하고 있는 code_challenge 문자열과 단순히 일치하는지만 확인하면 된다.
+3. code_challenge_method가 S256이면 인가서버는 전달된 code_verifier를 가져와 동일한 S256 메소드를 사용하여 변환한 다음 보관된 code_challenge 문자열과 비교해 일치 여부를 판단한다.
