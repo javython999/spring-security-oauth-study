@@ -531,3 +531,84 @@ sequenceDiagram
 1. 권한 부요 코드 흐름에 있어 인가서버는 code_verifier를 검증하기 위해 code_challenge_method를 이미 알고 있어야 한다.
 2. 토큰 교환시 code_challenge_method가 plain이면 인가서버는 전달된 code_verifier와 보관하고 있는 code_challenge 문자열과 단순히 일치하는지만 확인하면 된다.
 3. code_challenge_method가 S256이면 인가서버는 전달된 code_verifier를 가져와 동일한 S256 메소드를 사용하여 변환한 다음 보관된 code_challenge 문자열과 비교해 일치 여부를 판단한다.
+
+# OAuth 2.0 Open ID Connect
+## 개요 및 특징
+* OpenID Connect 1.0은 OAuth 2.0 프로토콜 위에 구축된 ID 계층으로 OAuth 2.0을 확장하여 인증 방식을 표준화한 OAuth 2.0 기반의 인증 프로토콜이다.
+* scope 지정시 'openid'를 포함하면 OpenID Connect 사용이 가능하며 인증에 대한 정보는 ID 토큰(ID Token)이라고 하는 JWT 토큰으로 반환된다.
+* OpenID Connect는 클라이언트가 사용자 ID를 확인할 수 있게 하는 보안 토큰인 ID Token을 제공한다.
+
+## ID Token & Scope
+### ID Token
+* ID 토큰은 사용자가 인증 되었음을 증명하는 결과물로서 OIDC 요청시 access token과 함께 클라이언트에게 전달되는 토큰이다.
+* ID 토큰은 JWT로 표현되며 헤더 페이로드 및 서명으로 구성된다.
+* ID 토큰은 개인키로 발급자가 서명하는 것으로서 토큰의 출처를 보장하고 변조되지 않았음을 보장한다.
+* 애플리케이션은 공개키로 ID 토큰을 검증 및 유효성을 검사하고 만료여부 등 토큰의 클레임을 확인한다.
+* 클라이언트는 클레임 정보에 포함되어 있는 사용자명, 이메일을 활용하여 인증 관리를 할 수 있다.
+
+### ID Token VS Access Token
+* ID Token은 API 요청에 사용해서는 안되며 사용자의 신원을 확인하기 위해 사용되어져야 한다.
+* Access Token은 인증을 위해 사용해서는 안되며 리소스에 접근하기 위해 사용되어져야 한다.
+
+### OIDC Scope
+* openid(필수) 클라이언트가 OpenID Connect 요청을 하고 있음을 인증 서버에 알린다.
+
+request: 
+```
+GET http://[base-server-url]/oauth2/auth?
+client_id=myClientApp
+&response_type=id_token
+&rediecturi=http://localhost:8080
+&scope=openid profile email
+*state=12345
+&nonce=678910
+```
+
+### OIDC 로그인 요청
+* OIDC 상호 작용 행위자
+  1) OpenID Provider: 줄여서 OP라고하며 OpenID제공자로서 최종 사용자를 인증하고 인증 결과와 사용자에 대한 정보를 신뢰 당사자에게 제공할 수 있는 OAuth 2.0 서버를 의미한다.
+  2) Relying Party: 줄여서 RP라고 하며 신뢰 당사자로서 인증 요청을 처리하기 위해 OP에 의존하는 OAuth 2.0 애플리케이션을 의미한다.
+* 흐름
+  1. RP는 OP에 권한 부여 요청을 보낸다.
+  2. OP는 최종 사용자를 인증하고 권한을 얻는다.
+  3. OP는 ID 토큰과 액세스 토큰을 응답한다.
+  4. RP는 Access Token을 사용하여  userInfo 엔드포인트에 요청을 보낼 수 있다.
+  5. userInfo 엔드포인트는 최종 사용자에 대한 클레임을 반환한다.
+
+### OIDC 로그인 요청
+* 매개변수 요청 및 응답
+  * 요청시 openid 범위를 scope 매개변수에 포함해야 한다.
+  * response_type 매개변수는 id_token을 포함한다.(response_type이 해당 토큰을 지원해야한다.)
+  * 요청은 nonce 매개변수를 포함해야 한다.(Implicit Flow인 경우 필수)
+    * 요청에 포함되는 값은 결과 id_token 값에 클레임으로 표함되며 이것은 토큰의 재생 공격을 방지하고 요청의 출처를 식별하는 데 사용할 수 있는 고유 문자열이다.
+    * 해당 nonce 클레임에는 요청에 전송된 것과 정확히 동일한 값이 포함되어야 한다. 그렇지 않은 경우 애플리케이션에서 인증을 거부해야 한다.
+
+# OAuth 2.0 Client
+## 스프링 시큐리티와 OAuth 2.0
+
+### Spring Security Oauth Project (Deprecated)
+```
+Client Support + Resource Server + Authorization Server
+```
+### Spring Security 5
+```
+Client Support + Resource Server 
+```
+Authorization Server를 별도로 
+
+## OAuth 2.0 Client 소개
+### 개요
+* OAuth 2.0 인가 프레임워크의 역할 중 인가서버 및 리소스 서버와의 통신을 담당하는 클라이언트의 기능을 필터 기반으로 구현한 모듈
+* 간단한 설정만으로 OAuth 2.0 인증 및 리소스 접근 권한, 인가서버 엔드포인트 통신등의 구현이 가능하며 커스터마이징, 확장이 용이하다.
+
+* OAuth 2.0 Login
+  * 애플리케이션의 사용자를 외부 OAuth 2.0 Provider나 OpenID Connect 1.0 Provider 계정으로 로그인할 수 있는 기능을 제공한다.
+  * 클로벌 서비스 프로바이더인 구글, 깃허브 등 로그인을 OAuth 2.0 로그인을 구현할 수 있도록 지원한다.
+  * OAuth 2.0 인가 프레임워크의 권한 부여 유형중 Authorization Code 방식을 사용한다.
+* OAuth 2.0 Client
+  * OAuth 2.0 인가 프레임워크에 정의된 클라이언트 역할을 지원한다.
+  * 인가 서버의 권한 부여 유형에 따른 엔드포인트와 직접 통신할 수 있는 API를 제공한다.
+    * Client Credentials
+    * Resource Owner Password Credentials
+    * Refresh Token
+  * 리소스 서버의 보호자원 접근에 대한 연동 모듈을 구현할 수 있다.
