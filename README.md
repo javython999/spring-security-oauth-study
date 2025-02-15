@@ -612,3 +612,42 @@ Authorization Server를 별도로
     * Resource Owner Password Credentials
     * Refresh Token
   * 리소스 서버의 보호자원 접근에 대한 연동 모듈을 구현할 수 있다.
+
+# OAuth 2.0 Client Fundamentals
+## application.yml / OAuth2ClientProperties
+### 클라이언트 권한 부여 요청 시작
+1. 클라이언트가 인가서버로 권한 부여 요청을 하거나 토큰 요청을 할 경우 클라이언트 정보 및 엔드포인트 정보를 참조해서 전달한다.
+2. application.yml 환경설정 파일에 클라이언트 설정과 인가서버 엔드포인트 설정을 한다.
+3. 초기화가 진행되면 application.yml에 있는 클라이언트 및 엔드포인트 정보가 OAuth2ClientProperties의 각 속성에 바인딩 된다.
+4. OAuth2ClientProperties에 바인딩 되어있는 속성의 값은 인가서버로 권한부여 요청을 하귀 위한 Client Registration 클래스의 필드에 저장된다.
+5. OAuth2Client는 ClientRegistration를 참조해서 권한부여 요청을 위한 매개변수를 구성하고 인가서버와 통신한다.
+
+### application.yml
+```yml
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            authorization-grant-type: authorization_code  # OAuth2.0 권한 부여 타입
+            client-id: oauth2-client-app  # 서비스 공급자에 등록된 클라이언트 아이디
+            client-name: oauth2-client-app # 클라이언트 이름
+            client-secret: KkIpKeQmJEj6wGXIhCZ0b95wY1Z0oHD1 # 서비스 공급자에 등록된 클라이언트 비밀번호
+            redirect-uri: http://localhost:8081/login/oauth2/codekeycloak # 인가서버에서 권한 코드 부여후 클라이언트로 리다이렉트 하는 위치
+            client-authentication-method: client_secret_post  # 클라이언트 자격증명 전송방식
+            scope: openid,email # 리소스 접근 제한 범위
+        provider:
+          keycloak:
+            authorization-uri: http://localhost:8080/realms/oauth2/protocol/openid-connect/auth # OAuth2.0 권한 코드 부여 엔드포인트
+            issuer-uri: http://localhost:8080/realms/oauth2 # 서비스 공급자 위치
+            jwk-set-uri: http://localhost:8080/realms/oauth2/protocol/openid-connect/certs # OAuth2.0 JwKSetUri 엔드포인트
+            token-uri: http://localhost:8080/realms/oauth2/protocol/openid-connect/token # OAuth2.0 토큰 엔드포인트
+            user-info-uri: http://localhost:8080/realms/oauth2/protocol/openid-connect/userinfo # OAuth2.0 userInfo 엔드포인트
+            user-name-attribute: preferred_username # OAuth2.0 사용자명을 추출하는 클레임명
+```
+
+### OAuth2ClientProperties(prefix ="spring.security.oauth2.client")
+* Registration은 인가 서버에 등록된 클라이언트 및 요청 파라미터 정보를 나타낸다.
+* Provider는 공급자에서 제공하는 엔드포인트 등의 정보를 나타낸다.
+* 클라이언트 및 공급자의 정보를 registration /provider 맵에 저장하고 인가서버와의 통신 시 각 항목을 참조하여 사용한다.
