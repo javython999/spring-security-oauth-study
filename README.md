@@ -651,3 +651,58 @@ spring:
 * Registration은 인가 서버에 등록된 클라이언트 및 요청 파라미터 정보를 나타낸다.
 * Provider는 공급자에서 제공하는 엔드포인트 등의 정보를 나타낸다.
 * 클라이언트 및 공급자의 정보를 registration /provider 맵에 저장하고 인가서버와의 통신 시 각 항목을 참조하여 사용한다.
+
+## ClientRegistration
+### 개념
+* OAuth 2.0 또는 OpenID connect 1.0 Provider에서 클라이언트의 등록 정보를 나타낸다.
+* ClientRegistration은 OpenID Connect Provider의 설정 엔드포인트나 인가 서버의 메타데이터 엔드포인트를 찾아 초기화할 수 있다.
+* ClientRegistration의 메소드를 사용하면 편리하게 ClientRegistration을 설정할 수 있다.
+  * `ClientRegistration clientRegistration = ClientRegistration.fromIssuerLocation("https://idp.example.com/issuer").build();`
+
+#### ClientRegistration
+* registrationId: clientRegistration을 식별할 수 있는 유니크한 ID
+* clientId: 클라이언트 식별자
+* clientSecret: 클라이언트 secret
+* clientAuthenticationMethod: provider에서 클라이언트를 인증할 때 사용할 메소드로서 basic, port, none(public 클라이언트)을 지원한다.
+  * authorizationGrantType: OAuth 2.0 인가 프레임워크는 네가지 권한을 부여 타입을 정의하고 있으며 지원하는 값은 `authorization_code`, `implicit`, `client_credentials`, `password`다.
+* redirectUriTemplate: 클라이언트에 등록한 리아딩렉트 URL로, 사용자의 인증으로 클라이언트에 접근 권한을 부여하고 나면, 인가 서버가 이 URL로 최종 사용자의 브라우저를 리다이렉트 시킨다.
+* scopes: 인가 요청 플로우에서 클라이언트가 요청한 openid, 이메일, 프로필 등의 scope
+* clientName: 클라이언트를 나타내는 이름으로 자동 생성되는 로그인 페이지에서 노출하는 등에 사용한다.
+* tokenUri: 인가 서버의 토큰 엔드포인트 URL
+* jwkSetUri: 인가 서버에서 Json Web Key Set을 가져올 때 사용할 URI. 이 keySet에는 ID 토큰의 Json Web Signature를 검증할 때 사용할 암호키가 있으며, UserInfo 응답을 검증할 때 사용할 수 있다.
+* configurationMetadata: OpenID Provider 설정 정보로서 application.properties에 spring.securityoauth2.client.provider를 설정했을 때만 사용할 수 있다.
+* uri: 인증된 최종 사용자의 클레임/속성에 접근할 때 사용하는 uri
+* authenticationMethod: 엔드포인트로 액세스 토큰을 전송할 때 사용할 인증 메소드. header, form, query를 지원한다.
+* userNameAttributeName: userInfo 응답에 있는 속성 이름으로, 최종 사용자의 이름이나 식별자에 접근할 때 사용한다.
+
+### CommonOAuth2Provider
+* OAuth 2.0 공급자 정보를 제공하는 클래스로서 글로벌 서비스 제공자 일부는 기본으로 제공되어진다.
+* Client ID와 Client Secret은 별도로 application.properties에 작성해야 한다.
+* 국내 공급자 정보는 수동으로 작성해서 사용해야 한다.
+* 클라이언트 기준인 Registration 항목과 서비스 제공자 기준인 Provider 항목으로 구분하여 설정한다.
+* application.properties가 아닌 Java Config 방식으로 ClientRegistration 등록을 설정할 수 있다.
+* clientRegistration 객체를 생성할 수 있는 빌더 클래스를 반환한다.
+
+## ClientRegistrationRepository 이해 및 활용
+### 개념
+* ClientRegistrationRepository는 OAuth 2.0 & OpenId Connect 1.0의 ClientRegistration 저장소 역할을 한다.
+* 클라이언트 등록 정보는 궁극적으로 인가 서버가 저장하고 관리하는데 이 레포지토리는 인가 서버에 일차적으로 저장된 클라이언트 등록 정보의 일부 검색하는 기능을 제공한다.
+* 스프링 부트 2.x 자동 설정은 spring.security.oauth2.client.registration.[registrationId] 하위 프로퍼티를 ClientRegistration 인스턴스에 바인딩하며, 각 ClientRegistration 객체를 ClientRegistrationRepository의 안에 구성한다.
+* ClientRegistrationRepository의 디폴트 구현체는 InMemoryClientRegistrationRepositoryek.
+* 자동 설정을 사용하면 ClientRegistrationRepository도 ApplicationContext 내 @Bean으로 등록하므로 필요하다면 원하는 곳에 의존성을 주입할 수 있다.
+
+## 자동설정에 의한 초기화 과정 이해
+1. OAuth2ImportSelector
+2. OAuth2ClientConfiguration
+3. OAuth2ClientWebMvcImportSelector
+4. OAuth2ClientWebMvcSecurityConfiguration
+   * DefaultOAuth2AuthorizedClientManager
+   * HandlerMethodArgumentResolver
+
+1. OAuth2ClientAutoConfiguration
+   * OAuth2ClientRegistrationRepositoryConfiguration
+     * InMemoryClientRegistrationRepository
+   * OAuth2ClientWebSecurityConfiguration
+     * ImMemoryOAuth2AuthorizedClientService
+     * AuthenticatedPrincipalOAuth2AuthorizedClientRepository
+     * oauth2SecurityFilterChain
