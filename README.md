@@ -706,3 +706,60 @@ spring:
      * ImMemoryOAuth2AuthorizedClientService
      * AuthenticatedPrincipalOAuth2AuthorizedClientRepository
      * oauth2SecurityFilterChain
+
+# OAuth 2.0 Client - oauth2Login()
+## OAuth2LoginConfigurer 초기화 이해
+* init
+  * OAuth2LoginAuthenticationFilter
+  * OAuth2LoginAuthenticationProvider
+  * OidcAuthorizationCodeAuthenticationProvider
+  * DefaultLoginPageGeneratingFilter
+
+1. configure
+2. OAuth2AuthorizationRequestRedirectFilter
+
+## OAuth2 로그인 구현 - OAuth 2.0 Login Page 생성
+* OAuth 2.0 로그인 페이지 자동 생성
+  * 기본적으로 OAuth 2.0 로그인 페이지 DefaultLoginPageGeneratingFilter가 자동으로 생성해 준다.
+  * 이 디폴트 로그인 페이지는 OAuth 2.0 클라이언트 명을 보여준다.
+  * 링크를 누르면 인가 요청을 시작할 수 있다.
+* 요청 매핑 Url
+  * RequestMatcher : /oauth2/authorization/{registrationId}*
+  * 디폴트 로그인 페이지를 재정의하려면 `oauth2Login().loginPage()`를 사요하면 된다.
+
+## OAuth2 로그인 구현 - Authorization Code 요청하기
+### 개요
+* 주요 클래스
+  * OAuth2AuthorizationRequestRedirectFilter
+    * 클라이언트는 사용자의 브라우저를 통해 인가 서버의 권한 부여 엔드포인트로 리다이렉션하여 권한 코드 부여 흐름을 시작한다.
+    * 요청 매핑 url
+      * AuthorizationRequestMatcher: /oauth2/authorization/{registrationId}*
+      * AuthorizationEndpointConfig. authorizationRequestBaseUri를 통해 재정의될 수 있다.
+  * DefaultOAuth2AuthorizationRequestResolver
+    * 웹 요청에 대하여 OAuth2AuthorizationRequest 객체를 최종 완성한다.
+    * /oauth2/authorization/{registrationId}와 일치하는지 확인해서 일치하면 registrationId를 추출하고 이를 사용해 ClientRegistration을 가져와 OAUth2AuthorizationRequest를 빌드한다.
+  * OAuth2AuthorizationRequest
+    * 토큰 엔드포인트 요청 파라미터를 담은 객체로서 인가 응답을 연계하고 검증할 때 사용한다.
+  * OAuth2AuthorizationRequestRepository
+    * 인가 요청을 시작한 시점부터 인가 요청을 받는 시점까지 OAuth2AuthorizationRequest를 유지해준다.
+
+## OAuth2 로그인 구현 - Access Token 교환하기
+### 개요
+* 주요 클래스
+  * OAuth2LoginAuthenticationFilter
+    * 인가서버로부터 리다이렉트 되면서 전달된 code를 인가 서버의 Access Token으로 교환하고 Access Token이 저장된 OAuth2LoginAuthenticationToken을 AuthenticationManager에 위임하여 UserInfo 정보를 요청해서 최종 사용자에 로그인 한다.
+    * OAuth2AuthorizedClientRepository를 사용하여 OAuth2AuthorizedClient를 저장한다.
+    * 인증에 성공하면 OAuth2AuthorizedClientRepository를 사용하여 OAuthorizedClient를 저장한다.
+    * 인증에 성공하면 OAuth2AuthenticationToken이 생성되고 SecurityContext에 저장되어 인증처리를 완료한다.
+    * 요청 매핑 url
+      * RequestMatcher: /login/oauth2/code/*
+  * OAuth2LoginAuthenticationProvider
+    * 인가 서버로부터 리다이렉트 된 이후 프로세스를 처리하며 Access Token으로 교환하고 이 토큰을 사용하여 UserInfo 처리를 담당한다.
+    * scope에 openid가 포함되어있으면 OidcAuthorizationCodeAuthenticationProvider를 호출하고 아니면 OAuth2AuthorizationCodeAuthenticationProvider를 호출하도록 제어한다.
+  * OAuth2AuthorizationCodeAuthenticationProvider
+    * 권한 코드 부여 흐름을 처리하는 AuthenticationProvider
+    * 인가 서버에 Authorization Code와 Access Token의 교환을 담당하는 클래스
+  * OidcAuthorizationCodeAuthenticationProvider
+    * OpenID Connect core 1.0 권한 코드 부여 흐름을 처리하는 AuthenticationProvider이며 요청 scope에 openid가 존재할 경우 실행된다.
+  * DefaultAuthorizationCodeTokenResponseClient
+    * 인가 서버의 token 엔드포인트로 통신을 담당하며 Access Token을 받은후 OAuth2AccessTokenResponse에 저장하고 반환한다.
