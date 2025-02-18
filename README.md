@@ -763,3 +763,72 @@ spring:
     * OpenID Connect core 1.0 권한 코드 부여 흐름을 처리하는 AuthenticationProvider이며 요청 scope에 openid가 존재할 경우 실행된다.
   * DefaultAuthorizationCodeTokenResponseClient
     * 인가 서버의 token 엔드포인트로 통신을 담당하며 Access Token을 받은후 OAuth2AccessTokenResponse에 저장하고 반환한다.
+
+## OAuth2 로그인 구현 - OAuth 2.0 User 모델 소개
+### 개요
+* OAuth2UserService
+  * 액세스 토큰을 사용해 UserInfo 엔드포인트 요청으로, 최종 사용자의 속성을 가져오며 OAuth2User 타입의 객체를 리턴한다.
+  * 구현체로 DefaultOAuth2UserService와 OidcUserService가 제공된다.
+  
+* DefaultOAuth2UserService
+  * 표준 OAuth 2.0 Provider를 지원하는 OAuth2UserService 구현체다.
+  * OAuth2UserRequest에 AccessToken을 담아 인가서버와 통신 후 사용자의 속성을 가지고 온다.
+  * 최종 OAuth2User 타입의 객체를 반환한다.
+* OidcUserService
+  * OpenID Connect 1.0 Provider를 지원하는 OAuth2UserService 구현체다
+  * OidcUserRequest에 있는 ID Token을 통해 인증 처리를 하며 필요시 DefaultOAuth2UserService를 사용해 UserInfo 엔드포인트의 사용자 속성을 요청한다.
+  * 최종 OidcUser 타입의 객체를 반환한다.
+
+```mermaid
+sequenceDiagram
+    OAuth 2.0 Client ->> Authorization Server: /token
+    Authorization Server ->> OAuth 2.0 Client: access_token
+    OAuth 2.0 Client ->> DefaultOAuth2UserService: 인가서버로 사용자 정보 조회
+    DefaultOAuth2UserService ->> Authorization Server: userAttributes
+```
+```mermaid
+sequenceDiagram
+    OAuth 2.0 Client ->> Authorization Server: /token?scope=openid
+    Authorization Server ->> OpenID Connect: OpenID Connect protocol
+    OpenID Connect ->> Authorization Server: id_token
+    Authorization Server ->> OAuth 2.0 Client: id_token, access_token
+    OAuth 2.0 Client ->> OidcUserService: id_token을 가지고 있어서 인가서버와 통신하지 않고 인증처리
+    OidcUserService ->> OAuth 2.0 Client: OidcUser
+```
+```mermaid
+sequenceDiagram
+    OidcUserService ->> DefaultOAuth2UserService: ""
+    DefaultOAuth2UserService ->> Authorization Server: /userInfo?access_token=${token}
+    Authorization Server ->> DefaultOAuth2UserService: userAttributes
+    DefaultOAuth2UserService ->> OidcUserService: OidcUserInfo
+    OidcUserService ->> OAuth 2.0 Client: OidcUser
+```
+
+## 구조
+* DefaultOAuth2UserService는 OAuth2User 타입의 객체를 반환한다.
+* OidcUserService는 OidcUser 타입의 객체를 반환한다.
+* OidcUserRequest의 승인된 토큰에 포함되어 있는 scope 값이 accessibleScopes의 값 들중 하나 이상 포함되어 있을 경우 UserInfo 엔드 포인트를 요청한다.
+
+## OAuth2User & OidcUser
+### 개요
+* 시큐리티는 UserAttributes 및 ID Token Claims을 집계 & 구성하여 OAuth2와 OidcUser 타입의 클래스를 제공한다.
+* OAuth2User
+  * OAuth 2.0 Provider에 연결된 사용자 주체를 나타낸다.
+  * 최종 사용자의 인증에 대한 정보인 Attributes를 포함하고 있으며 first name, middle name, last name, email, phone number, address 등으로 구성된다.
+  * 기본 구현체는 DefaultOAuth2User이며 인증 이후 Authentication의 principal 속성에 저장된다.
+* OidcUser
+  * OAuth2User를 상송한 인터페이스이며 OIDC Provider에 연결된 사용자 주체를 나타낸다.
+  * 최종 사용자의 인증에 대한 정보인 Claims를 포함하고 있으며 OidcIdToken 및 OidcUserInfo에서 집계 및 구성된다.
+  * 기본 구현체는 DefaultOidcUser이며 DefaultOAuth2User를 상송하고 있으며 인증 이후 Authentication의 principal 속성에 저장된다.
+
+```mermaid
+sequenceDiagram
+    OAuth 2.0 Client ->> Authorization Server: /userInfo?access_token
+    Authorization Server ->> OAuth 2.0 Client: OAuth2User
+```
+```mermaid
+sequenceDiagram
+    OAuth 2.0 Client ->> Authorization Server: /token?scope=openid
+    Authorization Server ->> OpenID Connect: claims, id_token 요청
+    OpenID Connect ->> OAuth 2.0 Client: claims, id_token
+```
