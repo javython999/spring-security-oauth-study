@@ -832,3 +832,54 @@ sequenceDiagram
     Authorization Server ->> OpenID Connect: claims, id_token 요청
     OpenID Connect ->> OAuth 2.0 Client: claims, id_token
 ```
+
+## OAuth2 로그인 구현 - UserInfo 엔드포인트 요청하기
+* OAuth 2.0 Provider UserInfo 엔드포인트 요청하기
+### 개요
+* 주요 클래스 
+  * DefaultOAuth2UserService
+    * `public OAuth2User loadUser(OAuth2UserReqeust userRequest)
+  * OAuth2UserRequestEntityConverter`
+    * OAuth2UserReqeust를 ResponseEntity로 컨버터 한다.
+  * RestOperations
+
+* OpenID Connect Provider OidcUserInfo 엔드포인트
+* 주요 클래스
+  * OidcUserService
+    * `public OidcUser loadUser(OidcUserRequest userReqeust)`
+    * 내부에 DefaultOAuth2UserService를 가지고 있으며 OIDC 사양에 부합할 경우 OidcUserReqeust를 넘겨주어 인가서버와 통신한다.
+    * OidcUser 타입의 객체를 반환한다.
+
+## OAuth2 로그인 구현 - OpenID Connect 로그아웃
+* 개념
+  * 클라이언트는 로그아웃 엔드포인트를 사용하여 웹 브라우저에 대한 세션과 쿠키를 지운다.
+  * 클라이언트 로그아웃 성공 후 OidcClientInitiatedLogoutSuccessHandler를 호출하여 OpenID Proivder 세션 로그아웃 요청한다.
+  * OpenID Provider 로그아웃 성공하면 지정된 위치로 리다이렉트 한다.
+  * 인가 서버 메타데이터 사양에 있는 로그아웃 엔드포인트는 end_session_endpoint로 정의되어있다.
+  
+* API 설정
+```java
+http.logout()
+    .logoutSuccessHandler(oidcLogoutSuccessHandler())
+    .invalidateHttpSession(true)
+    .clearAuthentication(true)
+    .deleteCookies("JSESSIONID")
+```
+```java
+private OidcClientInitiatedLogoutSuccessHandler oidcLogoutHandler() {
+    OidcClientInitiatedLogoutSuccessHandler successHandler = new OidcClientInitiatedLogoutSuccessHandler(clientRegistrationRepository);
+    successHandler.setPostLogoutRedirectUri("http://localhost:8081/login");
+    return successHandler;
+}
+```
+
+## OAuth2 로그인 구현 - Spring MVC 인증 객체 참조하기
+* Authentication
+  * `public void dashboard(Authentication authentication) {}`
+    * oauth2Login()으로 인증을 받게 되면 Authentication은 OAuth2AuthenticationToken 타입의 객체로 바인딩 된다.
+    * principal에는 OAuth2User 타입 혹은 OidcUser 타입의 구현체가 저장된다.
+    * DefaultOidcUser는 OpenID Connect 인증을 통해 ID Token 및 클레임 정보가 포함된 객체이다.
+* @AuthenticationPrincipal
+  * `public void dashboard(@AuthenticationPrincipal Oauth2User principal or OidcUser principal) {}`
+  * AuthenticationPrincipalArgumentResolver 클래스에서 요청을 가로채어 바인딩 처리를 한다.
+    * Authentication을 SecurityContext로부터 꺼내와서 Principal 속성에 OAuth2User 혹은 OidcUser 타입의 객체를 저장한다.
