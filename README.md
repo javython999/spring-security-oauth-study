@@ -883,3 +883,28 @@ private OidcClientInitiatedLogoutSuccessHandler oidcLogoutHandler() {
   * `public void dashboard(@AuthenticationPrincipal Oauth2User principal or OidcUser principal) {}`
   * AuthenticationPrincipalArgumentResolver 클래스에서 요청을 가로채어 바인딩 처리를 한다.
     * Authentication을 SecurityContext로부터 꺼내와서 Principal 속성에 OAuth2User 혹은 OidcUser 타입의 객체를 저장한다.
+
+
+## API 커스텀 구현 -Authorization BaseUrl & Redirection BaseUrl
+```java
+http.oauth2Login(oauth2 -> oauth2
+        .loginPage("/login")
+        .loginProcessingUrl("/login/v1/oauth2/code/")
+        .authorizationEndpoint(authorizationEndpointConfig -> authorizationEndpointConfig.baseUri("/oauth2/v1/authorization"))
+        .redirectionEndpoint(redirectionEndpointConfig -> redirectionEndpointConfig.baseUri("/login/v1/oauth2/code/*"))
+)
+```
+* authorizationEndpoint.baseUri("/ouaht2/v1/authorization")은 권한 부여 요청 BaseUri를 커스텀한다.
+  * 1단계 권한 부여 요청을 처리하는 OAuth2AuthorizationRequestRedirectFilter에서 요청에 대한 매칭 여부를 판단한다.
+  * 설정에서 변경한 값이 클라이언트의 링크 정보와 일치하도록 맞추어야 한다.
+* redirectionEndpoint.baseUri("/login/v1/oauth2/code/*)는 인가 응답의 baseUri를 커스텀한다.
+  * Token 요청을 처리하는 OAuth2LoginAuthenticationFilter에서 요청애 대한 매칭 여부를 판단한다.
+    * application.yml 설정 파일에서 registration 속성의 redirectUri 설정에도 변경된 값을 적용해야 한다.
+    * 인가 서버의 redirectUri 설정에도 변경된 값을 적용해야 한다.
+  * loginProcessUrl("/login/v1/oauth2/code/*)를 설정해도 결과는 동일하지만 redirectionEndpoint.baseUri가 더 우선이다.
+
+## API 커스텀 구현 - OAuth2AuthorizationRequestResolver
+### OAuth2AuthorizationRequestResolver
+* Authorization Code Grant 방식에서 클라이언트 인가서버로 권한 부여 요청을 할 때 실행되는 클래스
+* OAuth2AuthorizationRequestResolver는 OAuth 2.0 인가 프레임워크에 정의된 표준 파라미터 외에 다른 파라미터를 추가하는 식으로 인가 요청을 할 때 사용한다.
+* DefaultOAuth2AuthorizationRequsetResolver가 디폴트 구현체로 제공되며 Consumer<OAuth2AuthorizationRequest.Builder> 속성에 커스텀할 내용을 구현한다.
