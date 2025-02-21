@@ -908,3 +908,112 @@ http.oauth2Login(oauth2 -> oauth2
 * Authorization Code Grant 방식에서 클라이언트 인가서버로 권한 부여 요청을 할 때 실행되는 클래스
 * OAuth2AuthorizationRequestResolver는 OAuth 2.0 인가 프레임워크에 정의된 표준 파라미터 외에 다른 파라미터를 추가하는 식으로 인가 요청을 할 때 사용한다.
 * DefaultOAuth2AuthorizationRequsetResolver가 디폴트 구현체로 제공되며 Consumer<OAuth2AuthorizationRequest.Builder> 속성에 커스텀할 내용을 구현한다.
+
+# OAuth 2.0 Client - oauth2Client()
+## OAuth2AuthorizedClient
+### 개념
+* OAuth2AuthorizedClient는 인가받은 클라이언트를 의미하는 클래스다.
+* 최종 사용자(리소스 소유자)가 클라이언트에게 리소스에 접근할 수 있는 권한을 부여하면, 클라이언트를 인가된 클라이언트로 간주한다.
+* OAuth2AuthorizedClient는 AccessToken과 RefreshToken을 ClientRegistration(클라이언트)와 권한을 부여한 최종 사용자인 Principal과 함께 묶어 준다.
+* OAuth2AuthorizedClient의 AccessToken을 사용해 리소스 서버의 자원에 접근 할 수 있으며 인가 서버와의 통신으로 토큰을 검증할 수 있다.
+* OAuth2AuthorizedClient의 ClientRegistration과 AccessToken을 사용해서 UserInfo 엔드포인트로 요청할 수 있다.
+
+### OAuth2AuthorizedClientRepository
+* OAuth2AuthorizedClientRepository는 다른 웹 요청이 와도 동일한 OAuthorizedClient를 유지하는 역할을 담당한다.
+* OAuth2AuthorizedClientService에게 OAuth2AuthorizedClient의 저장, 조회, 삭제 처리를 위임한다.
+
+### OAuth2AuthorizedClientService
+* OAuth2AuthorizedClientService는 애플리케이션 레벨에서 OAuth2AuthorizedClient를 관리(저장, 조회, 삭제)한다.
+
+### 웹 애플리케이션에서 활용
+* OAuth2AuthorizedClientRepository나 OAuth2AuthorizedClientService는 OAuth2AuthorizedClient에서 OAuth2AccessToken을 찾을 수 있는 기능을 제공하므로 보호중인 리소스 요청을 시작할 때 사용할 수 있다.
+
+## OAuth2AuthorizationCodeGrantFilter
+### 개념
+* AuthorizationCodeGrant 방식으로 권한 부여 요청을 지원하는 필터
+* 인가 서버로부터 리다이렉트 되면 전달된 code를 인가 서버의 AccessToken으로 교환한다.
+* OAuth2AuthorizedClientRepository를 사용하여 OAuth2AuthorizedClient를 저장후 클라이언트의 RedirectUri로 이동한다.
+
+### 실행 조건
+* 요청 파라미터에 code와 state 값이 존재하는지 확인
+* OAuth2AuthorizationRequest 객체가 존재하는 지 확인
+
+## DefaultOAuth2AuthorizedClientManager
+### 개념
+* OAuth2AuthorizedClinet를 전반적으로 관리하는 인터페이스
+* OAuth2AuthorizedClientProvider로 OAuth 2.0 클라이언트에 권한 부여
+  * Client Credentials Flow
+  * Resource Owner Password Flow
+  * Refresh Token Flow
+* OAuth2AuthorizedClientService나 OAuth2AuthorizedClientRepository에 OAuth2AuthrizedClient 저장을 위임한 후 OAuth2AuthorizedClient 최종 반환
+* 사용자 정의 OAuth2AuthorizationSuccessHandler 및 OAuth2AuthorizationFailureHandler를 구성하여 성공/실패 처리를 변경할 수 있다.
+* invalid_grant 오류로 인해 권한 부여 시도가 실패하면 이전에 저장된 OAuth2AuthorizedClient가 OAuth2AuthorizedClientRepository에서 제거 된다.
+
+### 특징
+* clientRegistrationRepository: 인가 서버가 저장하고 소유하고 있는 클라이언트 등록 정보의 복사본을 저장한다.
+* OAuth2AuthorizedClientRepository: 클라이언트와 인가 서버 요청 간에 OAuth2AuthorizedClient 정보를 계속 유지하며 OAuth2AuthorizedClientService에게 위임하여 처리한다.
+* OAuth2AuthorizedClient의 저장, 조회, 삭제 과리를 담당한다.
+
+* OAuth 2.0 클라이언트 인증(또는 재인증) 하기 위한 전략 클래스로 특정 권한 부여 유형을 구현한다.
+  * ClientCredentialsOAuth2AuthorizedClientProvider
+  * PasswordOAuth2AuthorizedClientProvider
+  * RefreshTokenOAuthorizedClientProvider
+
+* 인가 서버의 토큰 엔드포인트에서 액세스 토큰 저장 증명에 대한 인증 코드를 "교환" 하기 위한 전략
+  * DefaultClientCredentialsTokenResponseClient
+  * DefaultPasswordTokenResponseClient
+  * DefaultRefreshTokenResponseClient
+
+### 생성
+```java
+@Bean
+public OAuth2AuthorizedClientManager authorizedClientManager(ClientRegistrationRepository clientRegistrationRepository, OAuth2AuthorizedClientRepository authorizedClientRepository) {
+    OAuth2AuthorizedClientProvider auth2AuthorizedClientProvider = OAuth2AuthorizedClientProviderBuilder.builder()
+            .authorizationCode()
+            .refreshToken()
+            .clientCredentials()
+            .password()
+            .build();
+
+    DefaultOAuth2AuthorizedClientManager authorizedClientManager = new DefaultOAuth2AuthorizedClientManager(clientRegistrationRepository, authorizedClientRepository);
+    authorizedClientManager.setAuthorizedClientProvider(auth2AuthorizedClientProvider);
+    return authorizedClientManager;
+}
+```
+## DefaultOAuth2AuthorizedClientManager
+### 개요
+* 스프링 시큐리티의 OAuth2Login 필터에 의한 자동 인증 처리를 하지 않고 DefaultOAuth2AuthorizedClientManager 클래스를 사용하여 Spring MVC에서 직접 인증 처리를 하는 로그인 기능을 구현한다.
+```java
+@Bean
+public OAuth2AuthorizedClientManager authorizedClientManager(ClientRegistrationRepository clientRegistrationRepository, OAuth2AuthorizedClientRepository authorizedClientRepository) {
+    OAuth2AuthorizedClientProvider authorizedClientProvider = OAuth2AuthorizedClientProviderBuilder.builder()
+            .authorizationCode()
+            .password()
+            .clientCredentials()
+            .refreshToken()
+            .build();
+
+    DefaultOAuth2AuthorizedClientManager authorizedClientManager = new DefaultOAuth2AuthorizedClientManager(clientRegistrationRepository, authorizedClientRepository);
+    authorizedClientManager.setAuthorizedClientProvider(authorizedClientProvider);
+    return authorizedClientManager;
+}
+```
+
+### 기본 구성
+* AppConfig - DefaultOAuth2AuthorizedClientManager 빈 생성 및 설정 초기화
+* DefaultOAuth2AuthorizedClientManager - OAuth2 권한 부여 흐름을 처리
+* LoginController - DefaultOAuth2AuthorizedClientManager를 사용해서 로그인 처리
+* home.html - 인증 받은 사용자만 접근 가능
+* index.html, client.html - 모든 사용자 접근 가능
+* application.yml - 권한 부여 유형을 client_credentials, password, refresh 타입으로 설정한다.
+
+### 로그인 구현 순서
+1. DefaultOAuth2AuthorizedClientManager 빈 생성 및 파라미터 초기 값들을 정의한다.
+2. 권한 부여 유형에 따라 요청이 이루어지도록 application.yml 설정을 조정한다.
+3. /oauth2Login 주소로 권한 부여 흐름을 요청한다.
+4. DefaultOAuth2AuthorizedClientManager에게 권한 부여를 요청한다.
+5. 권한 부여가 성공하면 OAuth2AuthorizationSuccessHandler를 호출하여 인증 이후 작업을 진행한다.
+   1. DefaultOAuth2AuthorizedClientManager의 최종 반환값인 OAuth2AUthorizedClient를 OAuth2AuthorizedClientRepository에 저장한다.
+6. OAuth2AUthorizedClient에서 AccessToken을 참조하여 /userinfo 엔드포인트 요청으로 최종 사용자 정보릎 가져온다.
+7. 사용자 정보 권한을 가지고 인증객체를 만든 후 SecurityContext에 저장하고 인증을 완료한다.
+
