@@ -28,6 +28,8 @@
   <p><input type="button" onclick="authorizationCode()" value="AuthorizationCode Grant" /></p>
   <p><input type="button" onclick="authorizationCodeWithPKCE()" value="AuthorizationCode Grant with PKCE" /></p>
   <p><input type="button" onclick="implicit()" value="Implicit Grant" /></p>
+  <p><a th:href="@{/oauth2Login-password-flow(username='user', password='1234')}">Password Flow</a></p>
+  <p><a th:href="@{/oauth2Login-client-credentials-flow}">Client Credentials Flow</a></p>
 </form>
 </body>
 </html>
