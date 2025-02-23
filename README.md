@@ -1017,3 +1017,9 @@ public OAuth2AuthorizedClientManager authorizedClientManager(ClientRegistrationR
 6. OAuth2AUthorizedClient에서 AccessToken을 참조하여 /userinfo 엔드포인트 요청으로 최종 사용자 정보릎 가져온다.
 7. 사용자 정보 권한을 가지고 인증객체를 만든 후 SecurityContext에 저장하고 인증을 완료한다.
 
+## @RegisteredOAuth2AuthorizedClient 이해 및 활용
+### @RegisteredOAuth2AuthorizedClient
+* 파라미터를 OAuth2AuthorizedClient 타입 인자로 리졸브 해준다.
+* OAuth2AuthorizedClientArgumentResolver에서 요청을 가로채어 유형별로 권한 부여 흐름을 실행하도록 한다.
+* 이 방법은 OAuth2AuthorizedClientManager나 OAuth2AuthorizedClientService로 OAuth2AuthorizedClient에 접근하는 것보다 편하다.
+
