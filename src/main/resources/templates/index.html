@@ -2,35 +2,57 @@
 <html xmlns="http://www.w3.org/1999/xhtml"
       xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
-
 <head>
-  <meta charset="UTF-8">
-  <title>Insert title here</title>
-  <script>
-    function authorizationCode(){
-      window.location = new URL('http://localhost:8081/oauth2/authorization/keycloak');
-    }
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400&display=swap" rel="stylesheet">
 
-    function authorizationCodeWithPKCE(){
-      window.location = new URL('http://localhost:8081/oauth2/authorization/keycloakWithPKCE');
-    }
+    <link rel="stylesheet" href="/css/owl.carousel.min.css">
 
-    function implicit(){
-      window.location = new URL('http://localhost:8081/oauth2/authorization/keycloak2');
-    }
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
 
-  </script>
+    <!-- Style -->
+    <link rel="stylesheet" href="/css/style.css">
+
+    <title>Login</title>
 </head>
 <body>
-<div>Welcome</div>
-<div sec:authorize="isAuthenticated()"><a th:href="@{/logout}">Logout</a></div>
-<form sec:authorize="isAnonymous()" action="#">
-  <p><input type="button" onclick="authorizationCode()" value="AuthorizationCode Grant" /></p>
-  <p><input type="button" onclick="authorizationCodeWithPKCE()" value="AuthorizationCode Grant with PKCE" /></p>
-  <p><input type="button" onclick="implicit()" value="Implicit Grant" /></p>
-  <p><a th:href="@{/oauth2Login/password-flow(username='user', password='1234')}">Password Flow</a></p>
-  <p><a th:href="@{/oauth2Login/v2/password-flow(username='user', password='1234')}">Password Flow</a></p>
-  <p><a th:href="@{/oauth2Login/client-credentials-flow}">Client Credentials Flow</a></p>
-</form>
+<div class="content">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-5" sec:authorize="isAnonymous()">
+                <div class="social-login text-center">
+                    <a th:href="@{/oauth2/authorization/google}" class="google btn btn-block">
+                        <span>Sign in with Google</span>
+                    </a>
+                    <a th:href="@{/oauth2/authorization/naver}" class="naver btn btn-block">
+                        <span>Sign in with Naver</span>
+                    </a>
+                    <a th:href="@{/oauth2/authorization/keycloak}" class="keycloak btn btn-block">
+                        <span>Sign in with Keycloak</span>
+                    </a>
+                </div>
+            </div>
+            <div class="col-md-5">
+                <div class="social-login text-center">
+                    <div sec:authorize="isAuthenticated()">
+                        <div><h2>안녕하세요 <span th:text="${user}"/> 님</h2></div>
+                        </br></br>
+                        <a th:href="@{/api/user}" class="keycloak btn btn-block">OAuth2 인증 정보</a>
+                        <a th:href="@{/api/oidc}" class="keycloak btn btn-block">OpenID Connect 인증 정보</a></br></br>
+                        <a th:href="@{/logout}" class="google btn btn-block">Logout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/js/jquery-3.3.1.min.js"></script>
+<script src="/js/popper.min.js"></script>
+<script src="/js/bootstrap.min.js"></script>
+<script src="/js/main.js"></script>
 </body>
 </html>

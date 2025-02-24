@@ -1,24 +1,33 @@
 package com.errday.springsecurityoauthstudy.controller;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.oauth2.client.registration.ClientRegistration;
-import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
-@Slf4j
+import java.util.Map;
+
 @Controller
 @RequiredArgsConstructor
 public class IndexController {
 
-    private final ClientRegistrationRepository clientRegistrationRepository;
-
     @GetMapping("/")
-    public String index() {
-        ClientRegistration keycloak = clientRegistrationRepository.findByRegistrationId("keycloak");
-        log.info("clientId = {}", keycloak.getClientId());
-        log.info("redirectUri = {}", keycloak.getRedirectUri());
+    public String index(Model model, Authentication authentication, @AuthenticationPrincipal OAuth2User oAuth2User) {
+        OAuth2AuthenticationToken authenticationToken = (OAuth2AuthenticationToken) authentication;
+
+        if (authenticationToken != null) {
+            Map<String, Object> attributes = oAuth2User.getAttributes();
+            String userName = (String) attributes.get("name");
+            if (authenticationToken.getAuthorizedClientRegistrationId().equals("naver")) {
+                Map<String ,Object> response = (Map<String, Object>) attributes.get("response");
+                userName = (String) response.get("name");
+            }
+            model.addAttribute("user", userName);
+        }
         return "index";
     }
 }
