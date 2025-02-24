@@ -1,53 +1,54 @@
 package com.errday.springsecurityoauthstudy.config;
 
-import com.errday.springsecurityoauthstudy.filter.CustomOAuth2LoginAuthenticationFilter;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.errday.springsecurityoauthstudy.CustomAuthorityMapper;
+import com.errday.springsecurityoauthstudy.service.CustomOAuth2UserService;
+import com.errday.springsecurityoauthstudy.service.CustomOidcUserService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizedClientManager;
-import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
+import org.springframework.security.core.authority.mapping.GrantedAuthoritiesMapper;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
-import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration
+@RequiredArgsConstructor
 public class OAuth2ClientConfig {
 
-    @Autowired
-    private DefaultOAuth2AuthorizedClientManager authorizedClientManager;
-    @Autowired
-    private OAuth2AuthorizedClientRepository authorizedClientRepository;
+    private final CustomOAuth2UserService customOAuth2UserService;
+    private final CustomOidcUserService customOidcUserService;
 
     private final String[] whiteList = {
             "/",
-            "/oauth2Login/password-flow",
-            "/oauth2Login/client-credentials-flow",
-            "/oauth2Login/v2/password-flow",
-            "/client",
             "/favicon.ico",
-            "/error"
+            "/error",
+            "/js/**",
+            "/css/**",
     };
+
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.csrf(AbstractHttpConfigurer::disable);
         http.authorizeHttpRequests(authorizeRequests -> authorizeRequests
+                //.requestMatchers("/api/user").hasAnyAuthority("SCOPE_profile", "SCOPE_email")
+                .requestMatchers("/api/user").hasAnyAuthority("ROLE_profile", "ROLE_email")
+                .requestMatchers("/api/oidc").hasAnyAuthority("SCOPE_openid")
                 .requestMatchers(whiteList).permitAll()
                 .anyRequest().authenticated()
         );
-        http.oauth2Client(Customizer.withDefaults());
-        http.addFilterAfter(customOAuth2AuthenticationFilter(), AnonymousAuthenticationFilter.class);
+        http.oauth2Login(oauth2 -> oauth2
+                .userInfoEndpoint(userInfoEndpoint -> userInfoEndpoint
+                        .userService(customOAuth2UserService)
+                        .oidcUserService(customOidcUserService)
+                )
+        );
+        http.logout(logout -> logout.logoutSuccessUrl("/"));
         return http.build();
     }
 
-    private CustomOAuth2LoginAuthenticationFilter customOAuth2AuthenticationFilter() {
-        CustomOAuth2LoginAuthenticationFilter auth2AuthenticationFilter = new CustomOAuth2LoginAuthenticationFilter(authorizedClientManager, authorizedClientRepository);
-        auth2AuthenticationFilter.setSecurityContextRepository(new HttpSessionSecurityContextRepository());
-        auth2AuthenticationFilter.setAuthenticationSuccessHandler((request, response, authentication) -> response.sendRedirect("/home"));
-        return auth2AuthenticationFilter;
+    @Bean
+    public GrantedAuthoritiesMapper customAuthoritiesMapper() {
+        return new CustomAuthorityMapper();
     }
 
 }

@@ -1023,3 +1023,48 @@ public OAuth2AuthorizedClientManager authorizedClientManager(ClientRegistrationR
 * OAuth2AuthorizedClientArgumentResolver에서 요청을 가로채어 유형별로 권한 부여 흐름을 실행하도록 한다.
 * 이 방법은 OAuth2AuthorizedClientManager나 OAuth2AuthorizedClientService로 OAuth2AuthorizedClient에 접근하는 것보다 편하다.
 
+# OAuth 2.0 Client Social Login
+## Google 연동
+### 연동 절차
+1. OAuth2 Client와 Google 인가 서버와의 연동을 통해 인증/인가 프로세스를 구현한다.
+2. 구글 서비스에 신규 서비스를 생성한다. https://console.cloud.google.com
+3. application.yml 설정
+```yml
+Spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+            client-secret: xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+## Naver 연동
+### 연동 절차
+1. OAuth2 Client와 Naver 인가 서버와의 연동을 통해 인증/인가 프로세스를 구현한다.
+2. 구글 서비스에 신규 서비스를 생성한다. https://developers.naver.com/main/
+3. application.yml 설정
+```yml
+Spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          naver:
+            client-id: xxxxxxxxxxxxxxxxxxxxxxxx
+            client-secret: xxxxxxxxxxxxxxxxxxxxx
+            authorization-grant-type: authorization_code
+            client-name: naver-client-app
+            redirect-uri: http://localhost:8081/login/oauth2/code/naver
+            scope: profile, email
+        provider:
+          naver:
+            authorization-uri: https://nid.naver.com/ouath2.0/authorize
+            jwk-set-uri: https://openapi.naver.com/v1/nid/verify
+            user-info-uri: https://openapi.naver.com/v1/nid/me
+            user-name_attribute: response
+            client-id: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+            client-secret: xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
