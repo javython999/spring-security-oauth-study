@@ -1,7 +1,7 @@
 package com.errday.springsecurityoauthstudy.service;
 
 import com.errday.springsecurityoauthstudy.model.ProviderUser;
-import com.errday.springsecurityoauthstudy.model.User;
+import com.errday.springsecurityoauthstudy.model.users.User;
 import com.errday.springsecurityoauthstudy.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

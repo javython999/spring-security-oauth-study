@@ -1,9 +1,8 @@
 package com.errday.springsecurityoauthstudy.service;
 
+import com.errday.springsecurityoauthstudy.converters.ProviderUserRequest;
 import com.errday.springsecurityoauthstudy.model.ProviderUser;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
@@ -22,7 +21,9 @@ public class CustomOAuth2UserService extends AbstractOAuth2UserService implement
         OAuth2UserService<OAuth2UserRequest, OAuth2User> userService = new DefaultOAuth2UserService();
         OAuth2User oAuth2User = userService.loadUser(userRequest);
 
-        ProviderUser providerUser = super.providerUser(clientRegistration, oAuth2User);
+        ProviderUserRequest providerUserRequest = new ProviderUserRequest(clientRegistration, oAuth2User);
+
+        ProviderUser providerUser = providerUser(providerUserRequest);
 
         // 회원 가입
         super.register(providerUser, userRequest);

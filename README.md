@@ -1068,3 +1068,8 @@ Spring:
             client-secret: xxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
+## Form 인증 연동
+### 연동 절차
+1. Form 인증과 OAuth2 인증을 연계하여 서비스 한다.
+2. 카카오 API에서 신규 서비스를 생성한다. (https://developers.kakao.com)
+3. application.yml 설정

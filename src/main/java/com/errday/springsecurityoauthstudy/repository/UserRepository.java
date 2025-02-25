@@ -1,6 +1,6 @@
 package com.errday.springsecurityoauthstudy.repository;
 
-import com.errday.springsecurityoauthstudy.model.User;
+import com.errday.springsecurityoauthstudy.model.users.User;
 import org.springframework.stereotype.Repository;
 
 import java.util.HashMap;
