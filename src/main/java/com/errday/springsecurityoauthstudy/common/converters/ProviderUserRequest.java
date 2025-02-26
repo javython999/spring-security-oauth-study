@@ -1,4 +1,4 @@
-package com.errday.springsecurityoauthstudy.converters;
+package com.errday.springsecurityoauthstudy.common.converters;
 
 import com.errday.springsecurityoauthstudy.model.users.User;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;

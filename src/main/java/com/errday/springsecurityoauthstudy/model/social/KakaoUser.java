@@ -7,10 +7,13 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 
 import java.util.Map;
 
-public class NaverUser extends OAuth2ProviderUser {
+public class KakaoUser extends OAuth2ProviderUser {
 
-    public NaverUser(Attributes attributes, OAuth2User oAuth2User, ClientRegistration clientRegistration) {
-        super(attributes.getSubAttributes(), oAuth2User, clientRegistration);
+    private Map<String, Object> otherAttributes;
+
+    public KakaoUser(Attributes attributes, OAuth2User oAuth2User, ClientRegistration clientRegistration) {
+        super(attributes.getOtherAttributes(), oAuth2User, clientRegistration);
+        this.otherAttributes = attributes.getOtherAttributes();
     }
 
     @Override
@@ -20,11 +23,11 @@ public class NaverUser extends OAuth2ProviderUser {
 
     @Override
     public String getUsername() {
-        return (String) getAttributes().get("email");
+        return (String) otherAttributes.get("nickname");
     }
 
     @Override
     public String getPicture() {
-        return (String) getAttributes().get("profile_image");
+        return (String) otherAttributes.get("profile_image_url");
     }
 }

@@ -1,6 +1,7 @@
 package com.errday.springsecurityoauthstudy.service;
 
-import com.errday.springsecurityoauthstudy.converters.ProviderUserRequest;
+import com.errday.springsecurityoauthstudy.common.converters.ProviderUserRequest;
+import com.errday.springsecurityoauthstudy.model.PrincipalUser;
 import com.errday.springsecurityoauthstudy.model.ProviderUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
@@ -28,6 +29,6 @@ public class CustomOAuth2UserService extends AbstractOAuth2UserService implement
         // 회원 가입
         super.register(providerUser, userRequest);
 
-        return oAuth2User;
+        return new PrincipalUser(providerUser);
     }
 }

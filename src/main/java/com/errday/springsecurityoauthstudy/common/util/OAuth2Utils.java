@@ -1,13 +1,11 @@
-package com.errday.springsecurityoauthstudy.util;
+package com.errday.springsecurityoauthstudy.common.util;
 
 import com.errday.springsecurityoauthstudy.model.Attributes;
-import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 
-import java.security.Principal;
 import java.util.Map;
 
-public class OAuth2Util {
+public class OAuth2Utils {
 
     public static Attributes getMainAttributes(OAuth2User oauth2User) {
         return Attributes.builder()
@@ -27,9 +25,5 @@ public class OAuth2Util {
                 .otherAttributes((Map<String, Object>) subAttributes.get(otherAttributesKey))
                 .build();
     }
-
-/*    public static String oAuth2UserName(OAuth2AuthenticationToken authenticationToken, PrincipalUser principalUser) {
-
-    }*/
 
 }

@@ -1,7 +1,7 @@
 package com.errday.springsecurityoauthstudy.service;
 
-import com.errday.springsecurityoauthstudy.converters.ProviderUserConverter;
-import com.errday.springsecurityoauthstudy.converters.ProviderUserRequest;
+import com.errday.springsecurityoauthstudy.common.converters.ProviderUserConverter;
+import com.errday.springsecurityoauthstudy.common.converters.ProviderUserRequest;
 import com.errday.springsecurityoauthstudy.model.ProviderUser;
 import com.errday.springsecurityoauthstudy.model.users.User;
 import com.errday.springsecurityoauthstudy.repository.UserRepository;

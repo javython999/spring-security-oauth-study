@@ -1,4 +1,4 @@
-package com.errday.springsecurityoauthstudy.converters;
+package com.errday.springsecurityoauthstudy.common.converters;
 
 import com.errday.springsecurityoauthstudy.model.ProviderUser;
 import org.springframework.stereotype.Component;
@@ -15,8 +15,11 @@ public class DelegatingProviderUserConverter implements ProviderUserConverter<Pr
     public DelegatingProviderUserConverter() {
         this.converters =
                 List.of(
+                        new UserDetailsProviderConverter(),
                         new OAuth2GoogleProviderUserConverter(),
-                        new OAuth2NaverProviderUserConverter()
+                        new OAuth2NaverProviderUserConverter(),
+                        new OAuth2KakaoProviderUserConverter(),
+                        new OAuth2KakaoOidcProviderUserConverter()
                 );
     }
 
