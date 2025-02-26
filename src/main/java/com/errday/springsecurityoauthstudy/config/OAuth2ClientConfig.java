@@ -1,15 +1,13 @@
 package com.errday.springsecurityoauthstudy.config;
 
-import com.errday.springsecurityoauthstudy.CustomAuthorityMapper;
 import com.errday.springsecurityoauthstudy.service.CustomOAuth2UserService;
 import com.errday.springsecurityoauthstudy.service.CustomOidcUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.core.authority.mapping.GrantedAuthoritiesMapper;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 
 @Configuration
 @RequiredArgsConstructor
@@ -36,19 +34,24 @@ public class OAuth2ClientConfig {
                 .requestMatchers(whiteList).permitAll()
                 .anyRequest().authenticated()
         );
+        http.formLogin(formLogin -> formLogin
+                .loginPage("/login")
+                .loginProcessingUrl("/loginProc")
+                .defaultSuccessUrl("/")
+                .permitAll()
+        );
         http.oauth2Login(oauth2 -> oauth2
                 .userInfoEndpoint(userInfoEndpoint -> userInfoEndpoint
                         .userService(customOAuth2UserService)
                         .oidcUserService(customOidcUserService)
                 )
         );
-        http.logout(logout -> logout.logoutSuccessUrl("/"));
+        //http.logout(logout -> logout.logoutSuccessUrl("/"));
+        http.exceptionHandling(exceptionHandlingConfigurer -> exceptionHandlingConfigurer
+                .authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login"))
+        );
         return http.build();
     }
 
-    @Bean
-    public GrantedAuthoritiesMapper customAuthoritiesMapper() {
-        return new CustomAuthorityMapper();
-    }
 
 }

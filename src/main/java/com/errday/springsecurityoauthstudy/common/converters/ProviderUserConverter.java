@@ -1,4 +1,4 @@
-package com.errday.springsecurityoauthstudy.converters;
+package com.errday.springsecurityoauthstudy.common.converters;
 
 public interface ProviderUserConverter<T, R> {
 

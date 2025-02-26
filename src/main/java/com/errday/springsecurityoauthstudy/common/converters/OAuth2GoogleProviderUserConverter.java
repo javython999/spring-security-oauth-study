@@ -1,9 +1,9 @@
-package com.errday.springsecurityoauthstudy.converters;
+package com.errday.springsecurityoauthstudy.common.converters;
 
-import com.errday.springsecurityoauthstudy.converters.enums.OAuth2Config;
+import com.errday.springsecurityoauthstudy.common.enums.OAuth2Config;
 import com.errday.springsecurityoauthstudy.model.ProviderUser;
 import com.errday.springsecurityoauthstudy.model.social.GoogleUser;
-import com.errday.springsecurityoauthstudy.util.OAuth2Util;
+import com.errday.springsecurityoauthstudy.common.util.OAuth2Utils;
 
 public class OAuth2GoogleProviderUserConverter implements ProviderUserConverter<ProviderUserRequest, ProviderUser> {
 
@@ -15,7 +15,7 @@ public class OAuth2GoogleProviderUserConverter implements ProviderUserConverter<
         }
 
         return new GoogleUser(
-                OAuth2Util.getMainAttributes(providerUserRequest.oAuth2User()),
+                OAuth2Utils.getMainAttributes(providerUserRequest.oAuth2User()),
                 providerUserRequest.oAuth2User(),
                 providerUserRequest.clientRegistration()
         );

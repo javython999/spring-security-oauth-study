@@ -1,9 +1,9 @@
-package com.errday.springsecurityoauthstudy.converters;
+package com.errday.springsecurityoauthstudy.common.converters;
 
-import com.errday.springsecurityoauthstudy.converters.enums.OAuth2Config;
+import com.errday.springsecurityoauthstudy.common.enums.OAuth2Config;
 import com.errday.springsecurityoauthstudy.model.ProviderUser;
 import com.errday.springsecurityoauthstudy.model.social.NaverUser;
-import com.errday.springsecurityoauthstudy.util.OAuth2Util;
+import com.errday.springsecurityoauthstudy.common.util.OAuth2Utils;
 
 public class OAuth2NaverProviderUserConverter implements ProviderUserConverter<ProviderUserRequest, ProviderUser> {
 
@@ -14,7 +14,7 @@ public class OAuth2NaverProviderUserConverter implements ProviderUserConverter<P
         }
 
         return new NaverUser(
-                OAuth2Util.getSubAttributes(providerUserRequest.oAuth2User(), "response"),
+                OAuth2Utils.getSubAttributes(providerUserRequest.oAuth2User(), "response"),
                 providerUserRequest.oAuth2User(),
                 providerUserRequest.clientRegistration()
         );

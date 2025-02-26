@@ -1,6 +1,7 @@
 package com.errday.springsecurityoauthstudy.service;
 
-import com.errday.springsecurityoauthstudy.converters.ProviderUserRequest;
+import com.errday.springsecurityoauthstudy.common.converters.ProviderUserRequest;
+import com.errday.springsecurityoauthstudy.model.PrincipalUser;
 import com.errday.springsecurityoauthstudy.model.ProviderUser;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
@@ -15,18 +16,23 @@ public class CustomOidcUserService extends AbstractOAuth2UserService implements 
 
     @Override
     public OidcUser loadUser(OidcUserRequest userRequest) throws OAuth2AuthenticationException {
-        ClientRegistration clientRegistration = userRequest.getClientRegistration();
+        ClientRegistration clientRegistration = ClientRegistration.withClientRegistration(userRequest.getClientRegistration())
+                .userNameAttributeName("sub")
+                .build();
+
+        OidcUserRequest oidcUserRequest = new OidcUserRequest(clientRegistration, userRequest.getAccessToken(), userRequest.getIdToken(), userRequest.getAdditionalParameters());
+
         OAuth2UserService<OidcUserRequest, OidcUser> userService = new OidcUserService();
-        OidcUser oidcUser = userService.loadUser(userRequest);
+        OidcUser oidcUser = userService.loadUser(oidcUserRequest);
 
-        ProviderUserRequest providerUserRequest = new ProviderUserRequest(clientRegistration, oidcUser);
+        ProviderUserRequest providerUserRequest = new ProviderUserRequest(clientRegistration,oidcUser);
+        ProviderUser providerUser = providerUser(providerUserRequest);
 
-        ProviderUser providerUser = super.providerUser(providerUserRequest);
 
         // 회원 가입
         super.register(providerUser, userRequest);
 
-        return oidcUser;
+        return new PrincipalUser(providerUser);
     }
 
 }

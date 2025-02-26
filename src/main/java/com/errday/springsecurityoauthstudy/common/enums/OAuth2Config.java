@@ -1,4 +1,4 @@
-package com.errday.springsecurityoauthstudy.converters.enums;
+package com.errday.springsecurityoauthstudy.common.enums;
 
 public class OAuth2Config {
 
