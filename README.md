@@ -1073,3 +1073,54 @@ Spring:
 1. Form 인증과 OAuth2 인증을 연계하여 서비스 한다.
 2. 카카오 API에서 신규 서비스를 생성한다. (https://developers.kakao.com)
 3. application.yml 설정
+
+# OAuth 2.0 Resource Server
+## 개요
+* OAuth2 2.0 인가 프레임워크의 역할 중 클라이언트 및 인가 서버와의 통신을 담당하는 리소스 서버의 기능을 필터 기반으로 구현한 모듈
+* 간단한 설정만으로 클라이언트의 리소스 접근 제한, 토큰 검증을 위한 인가 서버와의 통신 등의 구현이 가능하다.
+* 애플리케이션의 권한 관리를 별도 인가 서버에 위임하는 경우에 사용할 수 있는 리소스 서버는 요청을 인가할 때 이 인가 서버에 물어 볼 수 있다.
+
+## OAuth2Resource Server
+* 클라이언트의 접근을 제한하는 인가 정책을 설정
+* 인가 서버에서 발급한 AccessToken의 유효성을 검증하고 접근 범위에 따라 적절한 자원을 전달하도록 설정한다.
+
+## JWT
+* JWT로 전달되는 토큰을 검증하기 위한 JwtDecoder, BearerTokenAuthenticationFilter, JwtAuthenticationProvider 등의 클래스 모델들을 제공한다.
+* 자체 검증 프로세스를 지원한다.
+
+## Opaque
+* 인가 서버의 introspection 엔드포인트로 검증할 수 있는 Opacque 토큰을 지원한다.
+* 실시간으로 토큰의 활성화 여부를 확인할 수 있다.
+
+## application.yml 설정
+```yml
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080/realms/oauth2
+          jwk-set-uri: http://localhost:8080/realms/oauth2/protocol/openid-connect/certs
+```
+* issuer-uri: 인가 서버가 발급한 JWT 토큰의 iss 클레임에 추가되는 값으로서 발급자를 나타낸다.
+* jwk-set-uri: 인가 서버가 발급한 JWT 토큰의 공개키 정보를 검색할 수 있는 엔드포인트를 나타낸다.
+* 리소스 서버는 자체 검증 설정에도 이 속성을 사용하며, 이 속성으로 인가 서버의 공개키를 찾고, 건내 받은 JWT의 유효성을 검사한다.
+
+## 인가 서버 메타데이터 엔드포인트
+* issuer-uri 프로퍼티를 사용하려면 인가 서버가 지원하는 엔드포인트는 반드시 셋중 하나여야 한다.
+  1) https://localhost:8080/issuer/.well-known/openid-configuration
+  2) https://localhost:8080/.well-known/openid-configuration/issuer
+  3) https://localhost:8080/.well-known/oauth-authorization-server/issuer
+
+## 자동설정에 의한 초기화 과정
+1. OAuth2ResourceServerAutoConfiguration
+2. OAuth2ResourceServerConfiguration (JWT/ Opaque 설정 클래스 임포트)
+   * OAuth2ResourceServerJtwConfiguration JWT 관련 설정
+     * JwtDecoderConfiguration JwtDecorder 생성 관련 설정
+     * OAuth2SecurityFilterChainConfiguration SecurityFilterChain 생성
+   * OAuth2ResourceServerOpaqueTokenConfiguration Opaque 관련 설정
+
+## API 설정
+* 모든 요청에 대하여 인증을 받아야 리소스 접근이 가능하다.
+* 사용자가 폼 로그인을 통해 인증하게 되면 리소스 접근이 가능하다.
+* 사용자가 폼 로그인을 통해 인증 과정없이 리소스 접근이 가능하도록 하려면 요청시 AccessToken을 가지고 자체 검증후 인증과정을 거치도록 한다.
