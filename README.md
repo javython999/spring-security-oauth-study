@@ -1124,3 +1124,75 @@ spring:
 * 모든 요청에 대하여 인증을 받아야 리소스 접근이 가능하다.
 * 사용자가 폼 로그인을 통해 인증하게 되면 리소스 접근이 가능하다.
 * 사용자가 폼 로그인을 통해 인증 과정없이 리소스 접근이 가능하도록 하려면 요청시 AccessToken을 가지고 자체 검증후 인증과정을 거치도록 한다.
+
+# OAuth2Resource Server API - jwt()
+## JWT API 설정 및 검증 프로세스 이해
+* 설정 클래스
+```java
+@Configuration(proxyBeanMethod = false)
+public class OAuth2ResourceServerConfig {
+    @Bean
+    SecurityFilterChain jwtSecurityFilterChain(HttpSecurity http) {
+        http.authorizeRequests((requests) -> requests.anyRequest().authenticated());
+        http.oauth2ResourceServer(OAuth2ResourceServerConfig::jwt);
+        return http.build();
+    }
+}
+```
+* API 설정
+  * SecurityFilterChain 타입의 빈을 생성해 보안 필터를 구성한다.
+  * HttpSecurity에 있는 oauth2ResourceServer().jwt() API를 정의하고 빌드하나.
+
+### 검증 프로세스 이해
+```yml
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080/realms/oauth2
+```
+* 프로퍼티를 설정하면 JWT로 인한 Bearer 토큰을 검증하는 리소스 서버가 자동으로 설정된다.
+* Open ID Connect Provider 설정 엔드포인트 또는 인가 서버 메타데이터 엔드포인트를 검색해서 jwk-set-url 엔드포인트를 찾아 검증을 진행한다.
+* 두가지 검증 전략을 설정한다.
+  * 리소스 서버는 인가 서버의 jwk-set-uri 엔드포인트로 유효한 공개키를 질의하기 위한 검증 전략을 설정한다.
+  * issuer-uri에 대한 각 JWT 클레임을 검증할 전략을 설정한다.
+
+### 검증 순서
+1. 클라이언트가 Authorization Bearer token-value 를 헤더에 담아서 요청한다.
+2. 리소스 서버는 요청한 토큰이 Bearer 토큰 사양에 부합하는지 검사한다.
+3. 인가 서버에서 JWT에 서명한 개인키와 매칭하는 공개키를 jwk-set-uri 엔드포인트 요청으로 가져와서 첫번째 검증을 진행한다.
+4. JWT에 있는 exp, nbf, iss 클레임의 정보가 기준에 푸합하는지 두번째 검증을 진행한다.
+5. 검증에 성공하면 JWT 객체를 생성하고 claims 정보에 있는 scope를 추출해서 시큐리티의 권한에 매칭한다.
+6. Authentication 객체를 생성하고 JWT 객체를 pincipal 속성에 저장한다.
+7. Authentication을 SecurityContext에 저장하고 인증을 완료한다.
+
+## JwtDecoder
+### JwtDecoder
+* JwtDecoder는 문자열도 된 JWT를 컴패트 클래임 표현 형식에서 Jwt 인스턴스로 디코딩하는 역할을 한다.
+* JwtDecoder는 Jwt가 Json 웹 서명(JWS) 구조로 생성된 경우 JWS 서명에 대한 검증의 책임이 있다.
+* 기본 구현체로는 NimbusJwtDecoder가 있다.
+
+### 생성 방법
+* JwtDecoders.fromIssuerLocation()
+```java
+@Bean
+public JwtDecoder jwtDecoder() {
+    return JwtDecoders.fromIssuerLocation(properties.getIssuerUri());
+}
+```
+* JwtDecorders.fromIssuerLocation()을 호출하면 Provider 설정 또는 인가 서버 메타데이터 엔드포인트로 Jwk Set Uri를 요청한다.
+* 애플리케이션에서 따로 정의한 JwtDecoder 빈이 없다면 스프링 부트가 위에 있는 디폴트 빈을을 등록한다.
+
+* NumbusJwtDecoder.withJwkSetUri()
+```java
+@Bean
+public JwtDecoder jwtDecoder() {
+    return NimbusJwtDecoder.withJwkSetUri(properties.getJwkSetUri())
+            .jwsAlgorithm(SignatureAlgorithm.RS512)
+            .build();
+}
+```
+* 기본적으로 스프링 부트에 의해 NimbusJwtDecoder 빈이 자동 생성될 경우 리소스 서버는 RS256을 사용한 토큰만 신뢰하고 이 토큰 만 검증할 수 있다.
+* JwkSetUri에 의한 검증 방식으로 NimbusJwtDecoder를 생성할 경우 알고리즘의 종류를 변경할 수 있으나 RSA 알고리즘에 한해 변경이 가능하고 HMAC은 지원하지 않는다.
+
