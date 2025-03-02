@@ -1334,3 +1334,61 @@ public JwtDecoder jwtDecoder() {
 * RSAKeyGenerator - 비대칭 암호화 알고리즘 키를 포함하는 JWK 생성기
 * OctetSequenceKeyGenerator - 대칭 암호화 알고리즘 키를 포함하는 JWK 생성기
 * EcKeyGenerator - 타원곡선 암호화 알고리즘 키 포함하는 JWK 생성기
+
+# OAuth 2.0 Resource Sever - MAC & RSA 토큰 검증
+## 기본 환경 및 공통 클래스
+### 토큰 검증 방법
+* 토큰 검증에 대한 다양한 케이스의 테스트를 위해 두 가지 방식으로 토큰 발행 및 검증을 진행한다.
+  * 암호화 알고리즘 방식에 따라 직접 발행한 JWT를 대상으로 검증을 진행한다.
+  * 인가 서버에서 발행한 AccessToken을 대상으로 검증을 진행한다.
+
+#### JwtDecoder Bean은 암호화 알고리즘 및 특정한 조건에 따라 각 생성되며 디코딩이 진행되면 주어진 알고리즘에 의해 검증하게 된다.
+
+### 토큰 검증 테스트
+# MAC 방식에 의한 검증 테스트
+* 자체 토큰 발행 및 검증
+* SecretKey 설정에 의한 검증
+
+# RSA 방식에 의한 검증 테스트
+* 자체 토큰 발행 및 검증
+* PublicKey 파일에 의한 검증
+* KeyStore 툴에 의한 검증
+* JwkSetUri 설정에 의한 검증
+
+### 공통 클래스
+* SignatureConfig
+  * 서명과 검증, MAC 및 RSA 암호화 JWK 등의 빈들을 생성하는 설정 클래스
+* JwtAuthenticationFilter
+  * 인가 서버를 대신하여 토큰을 발행하는 커스텀 필터로서 UsernamePasswordAuthenticationFilter를 상송한다.
+  * Post /login 요청에 대한 인증 처리를 담당한다.
+  * 인증에 성공하게 되면 SecuritySigner를 호출해서 JWT 생성하고 클라이언트에게 응답한다.
+  * MAC과 RSA의 서명 및 인증에 공통으로 사용하는 필터
+* SecuritySigner
+  * MAC 및 RSA 암호화 방식에 따라 토큰을 발행하는 추상 클래스
+
+## MAC 검증 기능 구현 - JwtAuthorizationMacFilter
+### 설정
+```java
+@Bean
+public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    http.csrf(AbstractHttpConfigurer::disable);
+    http.sessionManagement(session -> session
+            .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+    );
+    http.authorizeHttpRequests(authorizeRequests -> authorizeRequests
+            .requestMatchers("/").permitAll()
+            .anyRequest().authenticated()
+    );
+    http.userDetailsService(userDetailsService());
+    http.addFilterBefore(jwtAuthenticationFilter(macSecuritySigner, octetSequenceKey), UsernamePasswordAuthenticationFilter.class);
+    http.addFilterBefore(jwtAuthorizationMacFilter(octetSequenceKey), UsernamePasswordAuthenticationFilter.class);
+    return http.build();
+}
+```
+
+### JwtAuthorizationMacFilter
+* Bearer 토큰을 MAC 알고리즘에 의해 검증하며 검증 성공시 인증 및 인가를 처리하는 필터
+
+### MacSecuritySigner
+* SecuritySigner를 상속받으며 MAC 기반 서명 및 토큰을 발행하는 클래스
+
