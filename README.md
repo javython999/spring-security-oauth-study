@@ -1392,3 +1392,113 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
 ### MacSecuritySigner
 * SecuritySigner를 상속받으며 MAC 기반 서명 및 토큰을 발행하는 클래스
 
+## JwtDecoder에 의한 검증
+### JwtDecoderConfig
+* secretKey 기반 jwtDecoder 생성
+* 대칭키 방식으로 생성된 토큰을 검증하기 위해 JWK를 상속한 OctetSequenceKey로 secretKey 기반 JwtDecoder를 생성한다.
+```java
+@Configuration
+public class JwtDecoderConfig {
+    @Bean
+    @ConditionalOnProperty(prefix = "spring.security.oauth2.resourceserver.jwt", name = "jws-algorithms", havingValue = "HS256", matchIfMissing = false)
+    public JwtDecoder jwtDecoderBySecretKey(OctetSequenceKey octetSequenceKey, OAuth2ResourceServerProperties properties) {
+        return NimbusJwtDecoder.withSecretKey(octetSequenceKey.toSecretKey())
+                .macAlgorithm(MacAlgorithm.from(properties.getJwt().getJwsAlgorithms().get(0)))
+                .build();
+    }
+}
+```
+
+## RSA 검증 기능 구현 - JwtAuthorizationRsaFilter
+### OAuth2ResourceServer
+```java
+@Bean
+public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtDecoder jwtDecoderBySecretKey) throws Exception {
+    http.csrf(AbstractHttpConfigurer::disable);
+
+    http.sessionManagement(session -> session
+            .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+    );
+
+    http.authorizeHttpRequests(authorizeRequests -> authorizeRequests
+            .requestMatchers("/").permitAll()
+            .anyRequest().authenticated()
+    );
+
+    http.userDetailsService(userDetailsService());
+
+    http.addFilterBefore(jwtAuthenticationFilter(null, null), UsernamePasswordAuthenticationFilter.class);
+    http.addFilterBefore(jwtAuthorizationRsaFilter(null), UsernamePasswordAuthenticationFilter.class);
+    return http.build();
+}
+```
+
+### JwtAuthorizationRsaFilter
+* Bearer 토큰을 RSA 알고리즘에 의해 검증하며 검증 성공시 인증 및 인가를 처리하는 필터
+
+### RsaSecuritySigner
+* SecuritySigner를 상속받으며 RSA 기반 서명 및 토큰을 발행하는 클래스
+
+### JwtDecoderConfig
+* PublicKey 기반 JwtDecoder 생성
+* 비대칭키 방식으로 생성된 토큰을 검증하기 위해 JWK를 상속한 RSAKey로 PublicKey 기반 JwtDecorder를 생성한다.
+```java
+ @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtDecoder jwtDecoderBySecretKey) throws Exception {
+        http.csrf(AbstractHttpConfigurer::disable);
+
+        http.sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+        );
+
+        http.authorizeHttpRequests(authorizeRequests -> authorizeRequests
+                .requestMatchers("/").permitAll()
+                .anyRequest().authenticated()
+        );
+
+        http.userDetailsService(userDetailsService());
+        http.oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt);
+
+        http.addFilterBefore(jwtAuthenticationFilter(null, null), UsernamePasswordAuthenticationFilter.class);
+        return http.build();
+    }
+```
+
+## Publickey.txt 의한 검증
+### KeyStore 클래스
+* Java는 KeyStore라는 인터페이스를 통해 암호화/복호화 및 전자 서명에 사용되는 Private Key, Public Key와 Certificate를 추상화하여 제공하고 있다.
+* KeyStore에는 SecretKey, PrivateKey, PublicKey, Certificate와 같은 보안 파일들이 저장되며 KeyStore는 파일 시스템에 저장하고 암호로 보호할 수 있다.
+* KeyStore는 KeyTool을 사용해서 생성할 수 있으며 기본타입은 jks이다.
+
+### Keytool
+* Keytool은 자바에서 제공하는 유틸리티로 keystore 기반으로 인증서와 키를 관리할 수 있으며 JDK에 포함되어 있다.
+* Keystore 생성후 PrivateKey, Publickey, Certificate 생성
+  * PrivateKey 생성: keytool -genkeypair -alias apiKey -keyalg RSA -keypass "pass1234" -keystore apiKey.jks -storepass "pass1234"
+  * Certificate 생성: keytool -export -alias apiKey -keystore apiKey.jks -rfc -file trustServer.cer
+  * PublicKey 생성: keytool -import -alias apiKey trustServer -file trustServer.cer -keystore publicKey.jks
+    
+### 순서
+1. KeyStore의 객체를 얻는다.
+   * keytool을 통해 얻은 apiKey.jks 파일을 읽어오면 키와 인증서를 가켜올 수 있으며 여기에는 개인키와 공개키 정보를 담고 있다.
+     * KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType())
+     * keystore.load(new FileInputStream("/certs/apiKey.jks"), keystorepassword.toCharArray())
+2. 개인 키를 얻는다.
+   * PrivateKey key = (PrivateKey) keystore.getKey(alias, "test1234".toCharArray());
+3. 인증서를 얻는다.
+   * Certificate certificate = keystore.getCertificate(alias);
+4. 인증서로부터 공개 키를 얻고 Base64로 인코딩한 다음 문자열을 변환한다.
+   * PublicKey publickey = certificate.getPublicKey();
+   * String publicStr = java.util.Base64.getMimeEncoder().encodeToString(publicKey.getEncoded());
+5. 인코딩된 공개 키 문자열을 txt 파일로 저장한다.
+   * OutputStreamWriter wirter = new OutputStreamWriter(new FileOutputStream("/cert/publicKey.txt), Charset.defaultCharset());
+   * writer.write(publicStr);
+   * writer.close();
+
+### OAuth2ResourceServer
+* 리소스 서버 설정 클래스로서 KeyStore에서 추출한 PublicKey에 의해 RSA 인증 및 인가 처리 설정을 한다.
+
+### RsaPublicKeySecuritySigner
+* SecuritySigner를 상속받으며 RSA 암호화 방식의 서명 및 토큰 발행
+
+### RsaKeyExtractor
+* apiKey.jks로부터 PrivateKey와 PublicKey를 추출하고 파일에 저장하는 클래스

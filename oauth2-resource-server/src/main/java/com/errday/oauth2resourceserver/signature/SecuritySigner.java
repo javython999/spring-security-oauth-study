@@ -3,6 +3,7 @@ package com.errday.oauth2resourceserver.signature;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -15,7 +16,7 @@ import java.util.List;
 
 public abstract class SecuritySigner {
 
-    public String getJwtInternal(MACSigner jwkSigner, UserDetails user, JWK jwk) throws JOSEException {
+    public String getJwtInternal(JWSSigner jwkSigner, UserDetails user, JWK jwk) throws JOSEException {
         List<String> authorities = user.getAuthorities().stream()
                 .map(auth -> auth.getAuthority())
                 .toList();
