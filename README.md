@@ -1502,3 +1502,44 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtDecoder jwt
 
 ### RsaKeyExtractor
 * apiKey.jks로부터 PrivateKey와 PublicKey를 추출하고 파일에 저장하는 클래스
+
+## Authentication & @AuthenticationPrincipal 참조
+### Authentication
+* 리소스 서버에서 토큰 검증이 이루어지면 토큰으로부터 정보를 추출해 인증 객체를 구성하게 된다.
+* 스프링 시큐리티의 자원에 대한 접근은 인증 객체의 유무와 권한정보에 따라 결정되기 때문에 인증 객체를 생성해야 한다.
+* 인증 객체는 JwtAuthenticationToken 타입으로 생성되고 SecurityContext에 저장한다.
+
+### JWT
+* JwtDecoder는 검증이 성공하면 토큰의 클레임으로부터 정보를 추출해서 최종 Jwt 객체를 반환한다.
+* Jwt 객체는 JwtAuthenticationToken의 principal 속성에 저장된다.
+
+### @AuthenticationPrincipal
+* JwtAuthenticationToken의 principal에 저장되어있는 Jwt 객체를 바로 참조할 수 있다.
+
+## 검증 아키텍처 이해 - BearerTokenAuthenticationFilter
+1. BearerTokenAuthenticationFilter: Bearer 타입으로 전달되는 요청을 가로채어 검증을 수행
+2. DefaultBearerTokenResolver: Authorization Header와 Bearer access token 형식이 맞는지 체크
+3. BearerTokenAuthenticationToken
+4. ProviderManager
+5. JwtAuthenticationProvider
+   * JwtDecoder
+   * RestTemplate
+   * AuthorizationServer
+6. JwtAuthenticationConverter
+7. JwtAuthenticationToken
+8. SecurityContext
+
+# OAuth 2.0 Resource Server 권한 구현
+## Scope 기반 권한 설정
+### Scope
+* 클라이언트가 인가서버로 OAuth 2.0 권한 부여 요청을 할 때 사용자의 리소스에 대한 접근 범위를 제한하기 위해 마련해 놓은 장치
+* 클라이언트는 하나 이상의 scope를 요청할 수 있으며 동의 화면에서 사용자가 Scope를 지정하게 되면 scope 범위에 제한된 토큰이 발행된다.
+
+### Scope로 리소스 접근 제어
+* 권한 부여시 인가 서버에서 지정했던 scope가 리소스 서버의 권한 범위에 포함하지 않으면 접근이 거부된다.
+* 권한 부여시 인가 서버에서 지정했던 scope가 리소스 서버의 권한 범위에 포함되면 접근이 허용된다.
+
+## JwtAuthenticationConverter - 권한 구성 커스터마이징
+### 개념
+* 인가 서버가 scope 속성 대신 자체 커스텀 속성을 사용하거나 리소스 서버에서 속성을 내부 권한에 맞게 조정해야 할 경우 사용한다.
+* JwtAuthenticationConverter는 Jwt 객체를 Authentication으로 변환하는 클래스이며 권한을 변환하는 JwtGrantedAuthoritiesConverter를 가지고 있다.
