@@ -1,5 +1,6 @@
 package com.errday.oauth2resourceserver.controller;
 
+import com.errday.oauth2resourceserver.dto.OpaqueDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -7,7 +8,9 @@ import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.core.OAuth2AuthenticatedPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -15,6 +18,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Map;
 
 
 @Slf4j
@@ -22,8 +26,18 @@ import java.net.URISyntaxException;
 public class IndexController {
 
     @GetMapping("/")
-    public Authentication index(Authentication authentication) {
+    public Authentication index(Authentication authentication, @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal) {
         log.info("authentication: {}", authentication);
+
+        BearerTokenAuthentication bearerTokenAuthentication = (BearerTokenAuthentication) authentication;
+        Map<String, Object> tokenAttributes = bearerTokenAuthentication.getTokenAttributes();
+        boolean active = (boolean) tokenAttributes.get("active");
+        OpaqueDto opaqueDto = new OpaqueDto();
+        opaqueDto.setActive(active);
+        opaqueDto.setAuthentication(authentication);
+        opaqueDto.setPrincipal(principal);
+        log.info("opaqueDto: {}", opaqueDto);
+
         return authentication;
     }
 

@@ -1543,3 +1543,70 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtDecoder jwt
 ### 개념
 * 인가 서버가 scope 속성 대신 자체 커스텀 속성을 사용하거나 리소스 서버에서 속성을 내부 권한에 맞게 조정해야 할 경우 사용한다.
 * JwtAuthenticationConverter는 Jwt 객체를 Authentication으로 변환하는 클래스이며 권한을 변환하는 JwtGrantedAuthoritiesConverter를 가지고 있다.
+
+# OAuth 2.0 Resource Server - opaque()
+## Opaque 개념 및 프로세스 이해
+### 개념
+* opaque 토큰은 인가 서버에서 호스트하는 OAuth 2.0 Introspection 엔드포인트로 검증한다.
+* Bearer 토큰이 리소스 서버에서 처리하는 자체 검증이라면 Opaque 토큰은 인가 서버에서 처리하는 원격 검증이라고 볼 수 있다.
+
+### 환경 설정
+* 두 가지 설정만 하면 인가 서버와의 Instrospection 검증이 가능하다.
+* 의존성 추가
+  * `runtimeOnly 'com.nimbusds:oauth2-oicd-sdk:9.35'`
+* introspection 엔드포인트 상세 정보 설정
+```yml
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        opaquetoken:
+          introspection-uri: http://localhost:8080/realms/oauth2/protocol/openid-connect/introspect
+          client-id: oauth2-client-app
+          client-secret: CQuesdk3Ddvmdsfsd
+```
+
+### 설정 클래스
+```yml
+@Configuration(proxyBeanMethod = false)
+static class OAuth2ResourceServerConfig {
+  @Bean
+  SecurityFilterChain(HttpSecurity http) throws Exception {
+    http.authorizeRequests(request) -> requests.anyRequest().authenticated());
+    http.oauth2ResourceServer(OAuth2ResourceServerConfigurer::opaque);
+    return http.build();
+  }
+}
+```
+
+### opaque 토큰 검사 및 프로세스 이해
+1. BearerTokenAuthenticationFilter
+2. BearerTokenResolver
+3. BearerTokenAuthenticationToken
+4. OpaqueTokenAuthenticationProvider
+5. NimbusOpaqueTokenIntrospector
+6. RestOperations
+   * /introspection
+7. BearerTokenAuthentication
+8. SecurityContext
+
+### OpaqueTokenIntrospector
+* 문자열 토큰을 RestTemplate을 사용하여 인가 서버 엔드포인트로 요청한다.
+* 토큰이 검증되면 최종 OAuth2AuthenticatedPrincipal 타입의 객체로 디코딩하여 반환한다.
+* OAuth2AuthenticatedPrincipal은 BearerTokenAuthentication의 principal 속성에 저장된다.
+
+### CustomOpaqueTokenIntrospector
+* OpaqueTokenIntrospector 인터페이스를 구현하여 커스텀한 구현체를 만들어 재정의 할 수 있다.
+* 검증 후 리턴 타입이 OAuth2AuthenticationPrincipal 이기 때문에 인가 서버에서 받아온 클레임 정보를 활용해서 여러가지 커스텀한 작업이 가능하다.
+
+# OAuth 2.0 Client - OAuth 2.0 Resource Server 연동
+## 연동 구성
+* OAuth 2.0 클라이언트 - 애플리케이션
+* OAUth 2.0 Resource Server - 보호된 자원 서버
+* keycloak - 인가 서버
+
+### 처리 순서
+1. 클라이언트에서 인가 서버로 Authorization Code Grant 타입으로 토큰을 발급받고 이후 사용자 엔드포인트 요청으로 인증을 진행한다.
+2. 클라이언트에서 인증에 성공하면 백단에서 RestTemplate로 Album 리소스 서버로 자원 요청을 한다.
+3. 최종적으로 반환받은 Albums 리소스를 클라이언트로 응답한다.
+
