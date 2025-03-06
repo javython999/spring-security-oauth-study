@@ -1610,3 +1610,42 @@ static class OAuth2ResourceServerConfig {
 2. 클라이언트에서 인증에 성공하면 백단에서 RestTemplate로 Album 리소스 서버로 자원 요청을 한다.
 3. 최종적으로 반환받은 Albums 리소스를 클라이언트로 응답한다.
 
+# Spring Authorization Server
+## OAuth2AuthorizationServerConfiguration
+### 개요
+* Spring Authorization Server는 OAuth2.1 및 OpenID Connect 1.0 사양 및 기타 관련 사양의 구현을 제공하는 프레임워크이다.
+* OpenID Connect 1.0 공급자 및 OAuth2 권한 부여 서버 제품을 구축하기 위한 안전하고 가볍고 사용자 지정 가능한 기반을 제공하기 위해 구축됨
+
+## OAuth2AuthorizationServerConfiguration
+### 개요
+* OAuth2 인가 서버에 대한 최소 기본 구성을 제공하는 설정 클래스이다.
+* OAUth2AuthorizationServerConfigurer를 사용하여 기본 구성을 적용하고 OAuth2 인가 서버를 지원하는 모든 인프라 구성 요소로 구성된 SecurityFilterChain 빈을 등록한다.
+* OpenID Connect 1.0 UserInfo 엔드포인트 및 OpenID Connect 1.0 클라이언트 등록 엔드포인트를 사용하기 위해 필수요소인 JwtDecoder를 정의해야 한다.
+
+### OAuth2 인가 서버 구성 방식
+1. @Import(OAuth2AuthorizationServerConfiguration.class)선언
+2. OAuth2AuthorizationSeverConfiguration.applyDefaultSecurity(HttpSecurity) 호출
+3. 사용자 구성
+   * OAuth2AuthorizationServerConfigurer는 OAuth2 인증 서버의 보안 구성을 완전히 사용자 정의할 수 있는 기능을 제공한다.
+   * 이를 통해 RegisterdClientRepository, OAuth2AuthorizationService, OAuth2TokenGenerator 등과 같이 핵심 구성 요소를 지정할 수 있다.
+   * 또한 권한 부여 엔드포인트, 토큰 엔드포인트, 토큰 검사 엔드포인트 등과 같은 프로토콜 엔드포인트에 대한 요청 처리 논리를 사용자 정의할 수 있다.
+
+## OAuth2AuthorizationServerConfigurer
+### OAuth2AuthorizationServerConfigurer
+* OAuth 2.0 Authorization Server 설정 클래스로서 사양에 따른 엔드포인트 설정, 필터, 프로바이더 등의 초기화 작업이 이루어진다.
+  * OAuth2ClientAuthenticationConfigurer: 클라이언트 인증 엔드포인트 설정
+  * OAuth2AuthorizationEndpointConfigurer: 권한 부여 엔드포인트 설정
+  * OAuth2TokenEndpointConfigurer: Token 엔드포인트 설정
+  * OAuth2TokenRevocationEndpointConfigurer: Opaque 토큰 검사 엔드포인트 설정
+  * OidcConfigurer: Token 취소 엔드포인트 설정
+  * OidcUserInfoEndpointConfigurer: UserInfo 엔드포인트 설정
+  * OidcClientRegistrationEndpointConfigurer: 클라이언트 등록 엔드포인트 설정
+
+## ProviderContext(AuthorizationServerContext)
+* 공급자에 대한 정보를 저장하는 컨텍스트 객체로서 공급자 설정 및 현재 issuer에 대한 액세스를 제공한다.
+
+### ProviderContextHolder(AuthorizationServerContextHolder)
+* ProviderContext를 가지고 있으며 ThreadLocal을 사용하여 현재 요청 스레드와 연결되어 있는 ProviderContext를 접근할 수 있게 한다.
+
+### ProviderContextFilter(AuthorizationServerContextFilter)
+* ProviderContextHolder와 ProviderContext를 연결한다.
