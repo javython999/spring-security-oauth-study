@@ -1649,3 +1649,36 @@ static class OAuth2ResourceServerConfig {
 
 ### ProviderContextFilter(AuthorizationServerContextFilter)
 * ProviderContextHolder와 ProviderContext를 연결한다.
+
+## Spring Authorization Sever - 인가 서버 시작하기
+### 개요
+* OAuth 2.0 Authorization Server의 권한 부여 흐름에 대한 이해를 돕기 위해 간단한 애플리케이션을 만든다.
+* 클라이언트는 Postman을 사용하고 인가 서버의 엔드포인트로 권한 부여 요청 및 응답을 확인한다.
+
+### AuthorizationServerConfig 생성
+* OAuth 2.0 Authorization Server 지원을 위한 설정 클래스로서 엔드포인트와 인증을 위한 시큐리티 필터 체인을 구성한다.
+
+### SecurityConfig 생성
+* 인가 서버가 클라이언트에게 권한 부여를 하기 위해서는 리소스 소유자의 인증이 필요하기 때문에 사용자 인증 메커니즘을 구성해야 한다.
+* OAuth 2.0 Authorization Server로 접속하는 모든 요청에 대해 인증 & 인가 정책을 설정하는 클래스
+* 기본 사용자 계정을 생성한다.
+
+### 클라이언트 구성
+* 클라이언트 요청은 OAuth 2.0 Authorization Code Grant 타입으로 한다.
+* OpenID Connect가 실행되도록 scope에 openid가 포함되도록 한다.
+* 클라이언트 인증 방법은 Basic으로 한다.
+* 클라이언트 RedirectUri는 http://127.0.0.1:8080으로 한다.
+
+# SpringSecurity Authorization Server - 주요 도메인 클래스
+## RegisteredClient / RegisteredClientRepository
+* 인가 서버에서 등록된 클라이언트를 의미하며 클라이언트가 authorization_code 또는 client_credentials와 같은 권한 부여 흐름을 시작하려면 먼저 클라이언트를  권한 부여 서버에 등록해야 한다.
+* 클라이언트 등록 시 클라이언트는 고유한 client_id, client_secret 및 고유한 클라이언트 식별자와 연결된 메타데이터를 할당한다.
+* 클라이언트의 메타데이터는 클라이언트 이름부터 프로토콜 흐름과 관련된 항목(예: 유효한 리다이렉션 URI 목록)까지 다양하다.
+  * SpringSecurity의 OAuth2 Client 지원에서 해당 클라이언트 등록 모델은 ClientRegistration이다.
+* 클라이언트의 주요 목적은 보호된 리소스에 대한 액세스를 요청하는 것으로 클라이언트는 먼저 권한 부여 서버를 인증하고 액세스 토큰과 교환을 요청한다.
+* 권한 부여 서버는 클라이언트 및 권한 부여를 인증하고 유효한 경우 액세스 토큰을 발급하고 클라이언트는 액세스 토큰을 표시하여 리소스 서버에서 보호된 리소스를 요청할 수 있다.
+
+## RegisteredClientRepository
+* 새로운 클라이언트를 등록하고 기존 클라이언트를 조회할 수 있는 저장소 클래스
+* 클라이언트 인증 권한 부여 처리, 토큰 자체 검사, 동적 클라이언트 등록 등과 같은 특정 프로토콜 흐름 시 다른 구성요소에서 참조한다.
+* 제공하는 구현체로 InMemoryRegisteredClientRepository 및 JdbcRegisteredClientRepository가 있다. 
