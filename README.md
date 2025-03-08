@@ -1682,3 +1682,82 @@ static class OAuth2ResourceServerConfig {
 * 새로운 클라이언트를 등록하고 기존 클라이언트를 조회할 수 있는 저장소 클래스
 * 클라이언트 인증 권한 부여 처리, 토큰 자체 검사, 동적 클라이언트 등록 등과 같은 특정 프로토콜 흐름 시 다른 구성요소에서 참조한다.
 * 제공하는 구현체로 InMemoryRegisteredClientRepository 및 JdbcRegisteredClientRepository가 있다. 
+
+## OAuth2Authorization 이해 및 활용
+### OAuth2Authorization
+* 리소스 소유자의 역할이 있는 권한 부여 방식인 경우 클라이언트에 부여된 권한 부여 즉 인가 상태를 유지하는 클래스
+* SpringSecurity의 OAuth2Client의 해당 인증 모델은 OAuth2AuthorizationClient와 서로 대응하는 개념이다.
+* 권한 부여 흐름이 성공적으로 완료되면 OAuth2Authorization이 생성되고 AccessToken이 저장되며 선택적으로 RefreshToken, IDToken 등이 저장된다.
+* 생성된 OAuth2Authorization은 OAuth2AuthorizationService에 의해 메모리나 DB에 저장된다.
+* OAuth2Authorization에 저장되는 OAuth2Token 타입들은 권한 부여 유형 및 Scope에 따라 다르다.
+
+### OAuth2AuthorizationService
+* OAuth2AuthorizationService는 새로운 OAuth2Authorization을 저장하고 기존 OAuth2Authorization을 검색하는 구성요소이다.
+* 특정 엔드포인트 프로토콜 흐름을 따를 때 다른 구성요소에서 사용된다.(예: 클라이언트 인증, 권한 부여 처리, 토큰 자체 검사, 토큰 취소, 동적 클라이언트 등록 등)
+* InMemoryOAuth2AuthorizationService 개발 및 테스트에만 사용하는 것이 좋으며 기본값이다.
+* JdbcOAuth2AuthorizationService는 JdbcTemplate을 사용하여 OAuth2Authorization 객체를 DB에 저장하여 상태를 계속 유지하도록 한다.
+
+# Spring Authorization Server - 엔드포인트 프로토콜
+## OAuth 2.0 Authorization Server Endpoint 기능 및 특징
+### OAuth2AuthorizationEndpointConfigurer
+* OAuth2 권한 부여 엔드포인트에 대한 사용자 정의 할 수 있는 기능을 제공한다.
+* OAuth2 권한 부여 요청에 대한 전처리, 기본 처리 및 후처리 로직을 커스텀하게 구현할 수 있도록 API를 지원한다.
+* OAuth2AuthorizationEndpointFilter를 구성하고 이를 OAuth2 인증 서버 SecurityFilterChain 빈에 등록한다.
+
+### OAuth2AuthorizationEndpointFilter
+* OAuth2 인증 요청(및 동의)을 처리하는 필터이며 다음과 같은 기본값으로 구성된다.
+* OAuth2AuthorizationCodeRequestAuthenticationConverter - 클라이언트 요청 파라미터를 OAuth2AuthorizationCodeRequestAuthenticationToken으로 변환하고 AuthenticationProvider에게 전달한다.
+* OAuth2AuthorizationCodeRequestAuthenticationProvider
+  * AuthorizationCode 권한 부여 방식을 처리하는 OAuth 2.0 인증 요청 및 동의에 대한 AuthenticationProvider 구현체이다.
+
+### RequestMatcher
+* Code 요청 패턴
+  * /oauth2/authorize (GET), /oauth2/authorize (POST)
+* Consent(동의하기) 요청 패턴
+  * /oauth2/authorize (POST)
+
+## OAuth 2.0 Authorization Server - 사용자 인증 단계
+### 개요
+* Code 요청
+```
+Request
+response_type(필수)
+client_id(필수)
+scope:(필수) 승인 이후 재요청인 경우에는 선택사항
+state: code 요청일 경우 체크 권장, 동의하기 요청일 경우 필수
+redirect_uri: 인가 서버에 여러개 등록시 필수, 단일 정의시 선택사항(값이 비어 있을 경우 RegistredClient에 저장된 정보 사용)
+```
+1. Resource owner 인증 전 단계
+```mermaid
+flowchart TB
+    Request --> OAuth2AuthorizationEndpointFilter
+    OAuth2AuthorizationEndpointFilter --> authorizationEndpointMatcher
+    authorizationEndpointMatcher --> matched{matched?}
+    matched -->|NO| chain.doFilter
+    matched -->|YES| OAuth2AuthorizationCodeRequestAuthenticationConverter
+    OAuth2AuthorizationCodeRequestAuthenticationConverter --> OAuth2AuthorizationCodeRequestAuthenticationToken
+    OAuth2AuthorizationCodeRequestAuthenticationToken --> ProviderManager
+    ProviderManager --> OAuth2AuthorizationCodeRequestAuthenticationProvider
+    OAuth2AuthorizationCodeRequestAuthenticationProvider --> RegisteredClientRepository
+    RegisteredClientRepository --> RegisteredClient
+    RegisteredClient --> OAuth2AuthorizationCodeRequestAuthenticationToken_
+    OAuth2AuthorizationCodeRequestAuthenticationToken_ -->  RegisteredClient
+    RegisteredClient --> Authorization_CODE/REDIRECT_URI/SCOPE
+    OAuth2AuthorizationCodeRequestAuthenticationToken_ --> Authorization_CODE/REDIRECT_URI/SCOPE
+    Authorization_CODE/REDIRECT_URI/SCOPE --> Authenticated{Authenticated?}
+    Authenticated{Authenticated?} --> |NO| loginPage
+    
+```
+
+
+
+## OAuth 2.0 Authorization Server - 동의 단계
+## OAuth 2.0 Token Endpoint 기능 및 특징
+## OAuth 2.0 Token Endpoint Flow - 클라이언트 인증하기
+## OAuth 2.0 Token Endpoint Flow - Authorization Code 엔드포인트
+## OAuth 2.0 Token Endpoint Flow - Client Credentials 엔드포인트
+## OAuth 2.0 Token Endpoint Flow - Authorization Code with PKCE 엔드포인트
+## OAuth 2.0 Token Introspection Endpoint - 토큰 검사 엔드포인트
+## OAuth 2.0 Token Revocation Endpoint - 토큰 해지 엔드포인트
+## OAuth 2.0 Authorization Server Metadata Endpoint / JWK Set Endpoint
+## OpenID Connect 1.0 Endpoint - 사용자 정보 엔드포인트

@@ -1,6 +1,6 @@
 package com.errday.authorizationserver;
 
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -9,9 +9,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequiredArgsConstructor
 public class RegisteredClientController {
 
+    @Autowired
     private RegisteredClientRepository registeredClientRepository;
 
     @GetMapping("/registeredClients")
