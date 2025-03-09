@@ -1748,12 +1748,127 @@ flowchart TB
     Authenticated{Authenticated?} --> |NO| loginPage
     
 ```
-
-
-
 ## OAuth 2.0 Authorization Server - 동의 단계
+### OAuth2AuthorizationConsent
+* OAuth2AuthorizationConsent는 OAuth2 권한 부여 요청 흐름의 권한 부여 "동의"를 나타낸다.
+* 클라이언트에 대한 액세스를 승인할 때 리소스 소유자는 클라이언트가 요청한 권한의 하위 집합만 허용할 수 있다.
+* 클라이언트가 범위를 요청하고 리소스 소유자가 요청된 범위에 대한 액세스를 허용하거나 거부하는 authorization_code_grant 흐름이다.
+* OAuth2  인증 요청 흐름이 완료되면 OAuth2 Authorization Consent가 생성되고 부여된 권한을 클라이언트 및 리소스 소유자와 연결한다.
+
+### OAuth2AuthorizationConsentService
+* OAuth2AuthorizationConsent가 저장되고 기존 OAuth2AuthorizationConsent를 조회하는 클래스로 주로 OAuth2 권한 부여 요청 흐름을 구현하는 구성요소에 의해 사용된다.
+* 기본 구현체는 InMemoryOAuth2AuthorizationConsentService와 JdbcOAuth2ConsentService가 있다.
+
+2. Resource owner 인증 및 Scope 동의 단계 - 1
+```mermaid
+flowchart TB
+    Request --> UsernamePasswordAuthenticationFilter
+    UsernamePasswordAuthenticationFilter --> SavedRequestAwareAuthenticationSuccessHandler
+    SavedRequestAwareAuthenticationSuccessHandler --> OAuth2AuthorizationEndpointFilter
+    OAuth2AuthorizationEndpointFilter --> OAuth2AuthorizationCodeRequestAuthenticationProvider
+    OAuth2AuthorizationCodeRequestAuthenticationProvider --> Authenticated{Authenticated?}
+    Authenticated --> |YES| OAuth2AuthorizationRequest
+    OAuth2AuthorizationRequest --> ConsentRequired{ConsentRequired?}
+    ConsentRequired --> |YES| AuthorizationCodeRequestAuthenticationToken
+    AuthorizationCodeRequestAuthenticationToken --> consentRequired{consentRequired == true}
+    consentRequired --> |YES| scopesToAuthorize
+    scopesToAuthorize --> generateConsentPage
+
+```
+2. Resource owner 인증 및 Scope 동의 단계 - 2
+```mermaid
+flowchart TB
+    Request --> OAuth2AuthorizationEndpointFilter
+    OAuth2AuthorizationEndpointFilter --> OAuth2AuthorizationCodeRequestAuthenticationProvider
+    OAuth2AuthorizationCodeRequestAuthenticationProvider --> OAuth2Authorization
+    OAuth2Authorization --> requestedScopes
+    OAuth2AuthorizationCodeRequestAuthenticationProvider --> authorizationCodeRequestAuthentication
+    authorizationCodeRequestAuthentication --> authorizedScopes
+    requestedScopes <--> authorizedScopes
+    requestedScopes --> containsAll{constainsAll?}
+    authorizedScopes --> containsAll{constainsAll?}
+    containsAll --> |NO| throwError
+    containsAll --> |YES| authorizedScopes
+    authorizedScopes --> Set_GrantedAuthority_
+    Set_GrantedAuthority_ --> SaveAuthorizationConsent
+    Set_GrantedAuthority_ --> isEmpty{isEmpty?}
+    isEmpty --> |NO| SaveAuthorizationConsent
+    isEmpty --> |YES| RemoveOAuthorizationConsent
+    RemoveOAuthorizationConsent --> RemoveOAuthorization
+    RemoveOAuthorization --> throwError
+    SaveAuthorizationConsent --> OAuth2AuthorizationCode
+    OAuth2AuthorizationCode --> SaveOAuth2Authorization
+    SaveOAuth2Authorization --> OAuth2AuthorizationCodeRequestAuthenticationToken
+    OAuth2AuthorizationCodeRequestAuthenticationToken --> code
+    OAuth2AuthorizationCodeRequestAuthenticationToken --> state
+    OAuth2AuthorizationCodeRequestAuthenticationToken --> redirectUrl
+    OAuth2AuthorizationCodeRequestAuthenticationToken --> AuthenticationSuccessHandler
+    AuthenticationSuccessHandler --> Response.redirect
+```
+
 ## OAuth 2.0 Token Endpoint 기능 및 특징
+### OAuth2TokenEndpointConfigurer
+* OAuth2 토큰 엔드포인트에 대한 사용자 정의 할 수 있는 기능을 제공한다.
+* OAuth2 토큰 요청에 대한 전처리, 기본 처리 및 후처리 로직을 커슽머하게 구현할 수 있도록 API를 지원한다.
+* OAuth2TokenEndpointFilter를 구성하고 이를 OAuth2 인증 서버 SecurityFilterChain 빈에 등록한다.
+* 지원되는 권한 부여 유형은 authorization_code, refresh_token, client_credential이다.
+
+### OAuth2TokenEndpointFilter
+* 클라이언트의 토큰 요청을 처리하는 필터이며 다음과 같은 기본값으로 구성된다.
+  * DelegatingAuthenticationConverter - 각 특정 유형의 AuthenticationConverter를 호출해서 처리를 위임한다.
+    * OAuth2AuthorizationCodeAuthenticationConverter - HttpServletRequest 정보를 OAuth2AuthorizationCodeAuthenticationToken으로 변환하여 반환
+    * OAuth2RefreshTokenAuthenticationConverter - HttpServletRequest 정보를 OAuth2RefreshTokensAuthenticationToken으로 변환하여 반환
+    * OAuth2ClientCredentialsAuthenticationConverter - HttpServletRequest 정보를 OAuth2ClientCredentialsAuthenticationToken으로 변환하여 반환
+  * OAuth2AuthorizationCodeAuthenticationProvider, OAuth2RefreshTokenAuthenticationProvider, OAuthClientCredentialsAuthenticationProvider
+    * 권한 부여 유형에 따라 토큰을 발행하는 AuthenticationProvider 구현체이다.
+  * AuthenticationSuccessHandler - 인증된 OAuth2AccessTokenAuthenticationToken을 처리하는 내부 구현체로서 인증토큰을 사용하여 OAuth2AccessTokenResponse를 반환한다.
+  * AuthenticationFailureHandler - OAuth2AuthenticationException과 관련된 OAuth2Error를 사용하는 내부 구현 인증예외이며 OAuth2Error를 반환한다.
+
+### RequestMatcher
+* 토큰 요청 패턴 
+  * /oauth2/token (POST)
+
 ## OAuth 2.0 Token Endpoint Flow - 클라이언트 인증하기
+### OAuth2ClientAuthenticationConfigurer
+* OAuth2 클라이언트 인증을 위한 사용자 정의 기능을 제공한다.
+* 클라이언트 인증 요청에 대한 전처리, 기본 처리 및 후처리로 로직을 커슽머하게 구현할 수 있도록 API를 지원한다.
+* OAuth2ClientAuthenticationFilter를 구성하고 이를 OAuth2 인증 서버 SecurityFilterChain 빈에 등록한다.
+* 지원되는 클라이언트 인증 방법은 client_secret_basic, client_secret_post, private_key_jwt, client_secret_jwt 및 none 이다.
+
+### OAuth2ClientAuthenticationFilter
+* 클라이언트 인증 요청을 처리하는 필터이며 다음과 같은 기본값으로 구성된다.
+* DelegatingAuthenticationConverter
+  * ClientSecretBasicAuthenticationConverter - 클라이언트 요청 방식이 HTTP Basic 일 경우 처리
+  * ClientSecretPostAuthenticationConverter - 클라이언트 요청 방식이 POST 일 경우 처리
+  * JwtClientAssertionAuthenticationConverter -  클라이언트 요청 방식이 JWT 토큰일 경우 처리
+  * PublicClientAuthenticationConverter - 클라이언트 요청 방식이 PKCE 일 경우 처리
+* DelegatingAuthenticationProvider
+  * ClientSecretAuthenticationProvider, jwtClientAssertionAuthenticationProvider, PublicClientAuthenticationProvider
+  * 권한 부여 유형에 따라 토큰을 발행하는 AuthenticationProvider 구현체이다.
+* AuthenticationSuccessHandler - 인증된 OAuth2ClientAuthenticationToken에 SecurityContext를 연결하는 내부 구현체
+* AuthenticationFailureHandler - 연결된 OAuth2AuthenticationException을 사용하여 OAuth2 오류 응답을 반환하나는 내부 구현체
+
+* RequestMatcher
+  * 토큰 요청 패턴
+    * /oauth2/token (POST)
+    * /oauth2/introspect (POST)
+    * /oauth2/revoke  (POST)
+  
+```mermaid
+flowchart TB
+    Request --> OAuthClientAuthenticationFilter
+    OAuthClientAuthenticationFilter --> ClientSecretPostAuthenticationConverter
+    ClientSecretPostAuthenticationConverter --> OAuth2ClientAuthenticationToken
+    OAuth2ClientAuthenticationToken --> ClientAuthenticationMethod
+    ClientAuthenticationMethod --> ClientSecretAuthenticationProvider
+    ClientSecretAuthenticationProvider --> clientId & clientSecret
+    clientId & clientSecret --> OAuth2ClientAuthenticationToken생성
+    OAuth2ClientAuthenticationToken생성 --> AuthenticationSuccessHandler
+    AuthenticationSuccessHandler --> SecurityContextOAuth2ClientAuthenticationToken
+    
+```
+
+
 ## OAuth 2.0 Token Endpoint Flow - Authorization Code 엔드포인트
 ## OAuth 2.0 Token Endpoint Flow - Client Credentials 엔드포인트
 ## OAuth 2.0 Token Endpoint Flow - Authorization Code with PKCE 엔드포인트
