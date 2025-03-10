@@ -1868,9 +1868,60 @@ flowchart TB
     
 ```
 
-
 ## OAuth 2.0 Token Endpoint Flow - Authorization Code 엔드포인트
+```mermaid
+flowchart TB
+    Request --> OAuth2AuthorizationCodeAuthenticationConverter
+    OAuth2AuthorizationCodeAuthenticationConverter --> OAuth2AuthorizationCodeAuthenticationToken
+    OAuth2AuthorizationCodeAuthenticationToken --> OAuth2AuthorizationCodeAuthenticationProvider
+    OAuth2AuthorizationCodeAuthenticationProvider --> OAuth2AuthorizationCode.getToken과Request.getToken비교
+    OAuth2AuthorizationCode.getToken과Request.getToken비교 --> isActive{isActive?}
+    isActive --> |NO| error
+    isActive --> |YES| AccessToken
+    AccessToken --> JwtGenerator
+    JwtGenerator --> JwtEncoder
+    JwtEncoder --> Jwt
+    Jwt --> OAuth2AccessToken
+    OAuth2AccessToken --> OAuth2RefreshToken
+    OAuth2RefreshToken --> ScopeOPENID{Scope OPENID?}
+    ScopeOPENID --> |YES| OidcToken
+    OidcToken --> AuthenticationSuccessHandler
+    AuthenticationSuccessHandler --> flush_tokenResponseParameter
+```
+### AccessToken
+* Successful Response
+  * access_token(필수): 권한 부여 서버에서 발급한 액세스 토큰 문자열
+  * token_type(필수): 토큰 유형은 일반적으로 "Bearer" 문자열
+  * expires_in(권장): 토큰의 만료시간
+  * refresh_token(선택사항): 액세스 토큰이 만료되면 응용 프로그램이 다른 액세스 토큰을 얻는 데 사용할 수 있는 Refresh 토큰을 반환하는 것이 유용하다. 단, implicit 권한 부여로 발행된 토큰은 새로고침 토큰을 발행할 수 없다.
+  * scope(선택사항): 사용자가 부여한 범위가 앱이 요청한 범위와 동일한 경우 이 매개변수는 선택사항, 사용자가 부여한 범위가 요청된 범위와 다른 경우 이 매개변수가 필요함
+* Unsuccessful Response
+  * invalid_request: 요청의 매개변수가 누락, 지원되지 않은 매개변수, 매개변수가 반복되는 경우 서버가 요청을 진행할 수 없음
+  * invalid_client: 요청에 잘못된 클라이언트 ID 또는 암호가 포함된 경우 클라이언트 인증에 실패, HTTP 401응답
+  * invalid_grant: 인증 코드가 유효하지 않거나 만료됨, 권한 부여에 제공된 리다이렉션 URL이 액세스 토큰 요청에 제공된 URL과 일치하지 않는 경우 반환하는 오류
+  * invalid_scope: 범위를 포함하는 액세스 토큰 요청의 경우 이 오류는 요청의 유효하지 않은 범위 값을 나타냄
+  * unauthorized_client: 이 클라이언트는 요청된 권한 부여 유형을 사용할 권한이 없음(RegisteredClient에 정의하지 않은 권한 부여 유형을 요청한 경우
+  * unsupported_grant_type - 권한 부여 서버가 인식하지 못하는 승인 유형을 요청하는 경우 이 코드를 사용함
+
 ## OAuth 2.0 Token Endpoint Flow - Client Credentials 엔드포인트
+```mermaid
+flowchart TB
+    Request --> OAuth2TokenEndpointFilter
+    OAuth2TokenEndpointFilter --> OAuth2ClientCredentialsAuthenticationConverter
+    OAuth2ClientCredentialsAuthenticationConverter --> OAuth2ClientCredentialsAuthenticationProvider
+    OAuth2ClientCredentialsAuthenticationProvider --> clientCredentialsAuthentication.getScope/registeredClient.getScope비교
+    clientCredentialsAuthentication.getScope/registeredClient.getScope비교 --> contains{contains?}
+    contains --> |NO| error
+    contains --> |YES| AccessToken
+    AccessToken --> JwtGenerator
+    JwtGenerator --> JwtEncoder
+    JwtEncoder --> Jwt
+    Jwt --> OAuth2AccessToken
+    OAuth2AccessToken --> AuthenticationSuccessHandler
+    AuthenticationSuccessHandler --> flush_tokenResponseParameter
+```
+
+
 ## OAuth 2.0 Token Endpoint Flow - Authorization Code with PKCE 엔드포인트
 ## OAuth 2.0 Token Introspection Endpoint - 토큰 검사 엔드포인트
 ## OAuth 2.0 Token Revocation Endpoint - 토큰 해지 엔드포인트
