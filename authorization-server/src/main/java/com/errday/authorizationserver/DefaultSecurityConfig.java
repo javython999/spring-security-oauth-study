@@ -127,6 +127,7 @@ public class DefaultSecurityConfig {
                 .scope(scope1)
                 .scope(scope2)
                 .clientSettings(ClientSettings.builder().requireAuthorizationConsent(true).build())
+                //.tokenSettings(TokenSettings.builder().reuseRefreshTokens(false).build())
                 .build();
     }
 

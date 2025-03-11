@@ -1921,9 +1921,91 @@ flowchart TB
     AuthenticationSuccessHandler --> flush_tokenResponseParameter
 ```
 
+## OAuth 2.0 Token Endpoint Flow - Refresh Token 엔드포인트
+```mermaid
+flowchart TB
+    Request --> Oauth2TokenEndpointFilter
+    Oauth2TokenEndpointFilter --> OAuth2RefreshTokenAuthenticationConverter
+    OAuth2RefreshTokenAuthenticationConverter --> OAuth2RefreshTokenAuthenticationToken
+    OAuth2RefreshTokenAuthenticationToken --> OAuth2RefreshTokenAuthenticationProvider
+    OAuth2RefreshTokenAuthenticationProvider --> authorizedScopes.getScopes/refreshTokenAuthentication.getScopes
+    authorizedScopes.getScopes/refreshTokenAuthentication.getScopes --> contains{contains?}
+    contains --> |NO| error
+    contains --> |YES| isActive{isActive}
+    isActive --> |NO| error
+    isActive --> |YES| OAuth2AccessToken
+    OAuth2AccessToken --> reuse-refresh-tokens{reuse-refresh-tokens?}
+    reuse-refresh-tokens --> |NO| refreshToken생성
+    reuse-refresh-tokens --> |YES| RefreshToken재사용
+    RefreshToken재사용 --> ScopeOpenId{scopeOpenId?}
+    ScopeOpenId --> |YES| AuthenticationSuccessHandler
+    AuthenticationSuccessHandler --> flush_tokenResponseParameters
+```
 
 ## OAuth 2.0 Token Endpoint Flow - Authorization Code with PKCE 엔드포인트
+```mermaid
+flowchart TB
+    Request --> OAuth2AuthorizationEndpointFilter
+    OAuth2AuthorizationEndpointFilter --> authorizationEndpointMatcher
+    authorizationEndpointMatcher --> matched{matched?}
+    matched --> |NO| chain.doFilter
+    matched --> |YES| OAuth2AuthorizationCodeRequestAuthenticationConverter
+    OAuth2AuthorizationCodeRequestAuthenticationConverter --> OAuth2AuthorizationCodeRequestAuthenticationToken
+    OAuth2AuthorizationCodeRequestAuthenticationToken --> additionalParameters
+    OAuth2AuthorizationCodeRequestAuthenticationToken --> ProviderManager
+    ProviderManager --> OAuth2AuthorizationCodeRequestAuthenticationProvider
+    OAuth2AuthorizationCodeRequestAuthenticationProvider --> RegisteredClientRepository
+    RegisteredClientRepository --> RegisteredClient
+    RegisteredClient --> OAuth2AuthorizationCodeRequestAuthenticationToken
+    OAuth2AuthorizationCodeRequestAuthenticationToken --> Authorization_code,Rediect_uri,Scope비교
+    Authorization_code,Rediect_uri,Scope비교 --> Authenticated{Authenticated?}
+    Authenticated --> |NO| loginPage
+    Authenticated --> |YES| OAuth2Authorization
+    OAuth2Authorization --> OAuth2AuthorizationService
+```
+```mermaid
+flowchart TB
+    Request --> OAuth2ClientAuthenticationFilter
+    OAuth2ClientAuthenticationFilter --> PublicClientAuthenticationConverter
+    PublicClientAuthenticationConverter --> OAuth2ClientAuthenticationToken
+    OAuth2ClientAuthenticationToken --> clientAuthenticationMethod
+    clientAuthenticationMethod --> PublicClientAuthenticationProvider_or_ClientSecretAuthenticationProvider
+    PublicClientAuthenticationProvider_or_ClientSecretAuthenticationProvider --> clientId,clientSecret,clientAuthenticationMethod
+    clientId,clientSecret,clientAuthenticationMethod --> CodeVerifierAuthenticator
+    CodeVerifierAuthenticator --> OAuth2Authorization
+    OAuth2Authorization --> OAuth2AuthorizationRequest
+    OAuth2AuthorizationRequest --> code_challenge
+    CodeVerifierAuthenticator --> Base64Encode
+    Base64Encode <--> code_challenge
+```
+
 ## OAuth 2.0 Token Introspection Endpoint - 토큰 검사 엔드포인트
+### OAuth2TokenIntrospectionEndpointConfigurer
+* OAuth2 토큰 검사 엔드포인트에 대한 사용자 정의를 할 수 있는 기능을 제공한다.
+* OAuth2 검사 요청에 대한 전처리, 기본처리, 및 후처리 로직을 커스텀하게 구현할 수 있도록 API를 지원한다.
+* OAuth2TokenIntrospectionEndpointFilter를 구성하고 이를 OAuth2 인증 서버 SecurityFilterChain 빈에 등록한다.
+
+### OAuth2TokenIntrospectionEndpointFilter
+* OAuth2 검사 요청을 처리하는 필터이며 다음과 같은 기본값으로 구성된다.
+* IntrospectionRequestConverter
+  * OAuth2 검사 요청을 추출하려고 할 때 사용되는 전처리기로서 OAuth2TokenIntrospectionAuthenticationToken을 반환한다.
+* OAuth2TokenIntrospectionAuthenticationProvider
+  * OAuth2TokenIntrospectionAuthenticationToken을 받아 인증 처리하는 AuthenticationProvider 구현체이다.
+
+### RequestMatcher
+* 토큰 검사 요청 패턴
+  * /oauth2/introspect (POST)
+```mermaid
+flowchart TB
+    Request --> OAuth2TokenIntrospectionEndpointFilter
+    OAuth2TokenIntrospectionEndpointFilter --> DefaultTokenIntrospectionAuthenticationConverter
+    OAuth2TokenIntrospectionAuthenticationToken --> OAuth2TokenIntrospectionAuthenticationProvider
+    OAuth2TokenIntrospectionAuthenticationProvider --> OAuth2TokenIntrospection
+    OAuth2TokenIntrospection --> OAuth2TokenIntrospectionAuthenticationToken
+    OAuth2TokenIntrospectionAuthenticationToken --> authenticationSuccessHandler
+    authenticationSuccessHandler --> response
+```
+
 ## OAuth 2.0 Token Revocation Endpoint - 토큰 해지 엔드포인트
 ## OAuth 2.0 Authorization Server Metadata Endpoint / JWK Set Endpoint
 ## OpenID Connect 1.0 Endpoint - 사용자 정보 엔드포인트
