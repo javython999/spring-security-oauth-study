@@ -2007,5 +2007,105 @@ flowchart TB
 ```
 
 ## OAuth 2.0 Token Revocation Endpoint - 토큰 해지 엔드포인트
+### OAuth2TokenRevocationEndpointConfigurer
+* OAuth2 토큰 취소 엔드포인트에 대해 사용자 정의를 할 수 있는 기능을 제공한다.
+* OAuth2 토큰 취소에 대한 전처리, 기본 처리 및 후처리 로직을 커스텀하게 구현할 수 있도록 API를 지원한다.
+* OAuth2TokenRevocationEndpointFilter를 구성하고 이를 OAuth2 인증서버 SecurityFilterChain빈에 등록한다.
+
+### OAuth2TokenRevocationEndpointFilter
+* OAuth2 토큰 취소를 처리하는 필터이며 다음과 같은 기본값으로 구성된다.
+* DefaultTokenRevocationAuthenticationConverter
+  * OAuth2 토큰 취소를 추출하려고 할때 사용되는 전처리기로서 OAuth2TokenRevocationAuthenticationToken을 반환한다.
+* OAuth2TokenRevocationAuthenticationProvider
+  * OAuth2TokenRevocationToken을 전달받아 인증처리를 하는 AuthenticationProvider 구현체이다.
+
+### RequestMatcher
+* 토큰 취소 요청 패턴
+  * /oauth2/revocation (POST)
+
+```mermaid
+flowchart TB
+    Request --> OAuth2TokenRevocationEndpointFilter
+    OAuth2TokenRevocationEndpointFilter --> DefaultTokenRevocationAuthenticationConverter
+    DefaultTokenRevocationAuthenticationConverter --> OAuth2TokenRevocationAuthenticationToken
+    OAuth2TokenRevocationAuthenticationToken --> OAuth2TokenAuthenticationProvider
+    OAuth2TokenAuthenticationProvider --> OAuth2Authorization
+    OAuth2Authorization --> OAuth2AuthenticationProviderUtils
+    OAuth2AuthenticationProviderUtils --> Token
+    Token --> OAuth2Authorization_토큰을_취소된_토큰으로_업데이트
+    OAuth2AuthenticationProviderUtils --> OAuth2AuthorizationService
+    OAuth2AuthorizationService --> AuthenticationSuccessHandler
+    OAuth2AuthorizationService --> OAuth2Authorization_토큰을_취소된_토큰으로_업데이트
+    AuthenticationSuccessHandler --> response.setStatus
+```
+
 ## OAuth 2.0 Authorization Server Metadata Endpoint / JWK Set Endpoint
+### OAuth2AuthorizationServerConfigurer
+* OAuth2AuthorizationServer 메타데이터 엔드포인트에 대한 지원을 제공한다.
+* OAuth2AuthorizationServerMetadataEndpointFilter를 구성하고 이를 OAuth2 인증 서버 SecurityFilterChain 빈에 등록한다.
+* OAuth2AuthorizationServer 메타데이터 요청을 처리하고 OAuth2 AUthorizationServer 메타데이터 응답을 반환한다.
+
+### RequestMatcher
+* 토큰 검사 요청
+  * /.well-know/oauth-authorization-server (GET)
+
+### OAuth2AuthorizationServerConfigurer
+* JWK Set 엔드포인트에 대한 지원을 제공한다.
+* NimbusJwkSetEndpointFilter를 구성하고 이를 SecuirtyFilterChain 빈에 등록한다.
+* NimbusJwkSetEndpointFilter는 JWK Set을 반환하는 필터이다.
+* JWK Set 엔드포인트는 JWKSource<SecurityContext> 빈이 등록된 겨웅에만 구성도니다.
+
+### RequestMatcher
+* 토큰 검사 요청 패턴
+  * /oauth2/jwks (GET)
+
+```mermaid
+flowchart TB
+    Request --> NimbusJwkSetEndpointFilter
+    NimbusJwkSetEndpointFilter --> Response.write
+    NimbusJwkSetEndpointFilter <--> JWKSet
+    JWKSet --> JWKSource
+    JWKSource --> JWKSelector
+    JWKSource --> JWKMatcher
+    JWKMatcher --> List_JWK
+    List_JWK --> JWKSet
+```
+    
 ## OpenID Connect 1.0 Endpoint - 사용자 정보 엔드포인트
+### OpenID Connect 1.0 Provider Configuration Endpoint
+* OidcConfigurer는 OpenID Connect 1.0 Provider Configuration 엔드포인트에 대한 지원을 제공한다.
+* OidcConfigurer는 OidcProviderConfigurationEndpointFilter를 구성하고 이를 OAuth2 인증 서버 SecurityFilterChain 빈에 등록한다.
+* OidcProviderConfigurationEndponitFilter는 OidcProvider는 Configuration 응답을 처리한다.
+
+### OpenID Connect 1.0 UserInfo Endpoint
+* OidcUserInfoEndpointConfigurer는 OpenID Connect 1.0 UserInfo 엔드포인트 사용자 정의하는 기능을 제공한다.
+* OidcUserInfoEndpointFilter를 구성하고 OAuth2 인증 서버 SecurityFilterChain 빈에 등록한다.
+
+### OidcUserInfoEndpointFilter
+* UserInfo 요청을 처리하고 OidcUserInfo 응답을 반환하는 필터이며 다음과 같은 기본값으로 구성된다.
+* OidcUserInfoAuthenticationProvider
+  * 요청된 scope를 기준으로 ID 토큰에서 표준 클레임을 추출하는 userInfoMapper를 가지고 있다.
+
+### RequestMatcher
+* 토큰 검사 요청 패턴
+  * /userinfo (POST)
+  * /userinfo (GET)
+
+```mermaid
+flowchart TB
+    Request --> ResourceSever
+    ResourceSever --> FilterSecurityInterceptor
+    ResourceSever --> JwtAuthenticationToken
+    FilterSecurityInterceptor --> OidcUserInfoEndpointFilter
+    OidcUserInfoEndpointFilter --> OidcUserInfoAuthenticationToken
+    OidcUserInfoAuthenticationToken --> OidcUserInfoAuthenticationProvider
+    OidcUserInfoAuthenticationProvider --> OAuth2AuthorizationService
+    OAuth2AuthorizationService --> AccessToken
+    AccessToken --> isActive{isActive?}
+    isActive --> |NO| error
+    isActive --> |YES| scope
+    scope --> openId{openId?}
+    openId --> |NO| error
+    openId --> |YES| OidcUserInfo
+    OidcUserInfo --> sendUserInfoResponse
+```
