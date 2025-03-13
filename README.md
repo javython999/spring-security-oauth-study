@@ -2109,3 +2109,24 @@ flowchart TB
     openId --> |YES| OidcUserInfo
     OidcUserInfo --> sendUserInfoResponse
 ```
+
+# OAuth 2.0 Client + Resource Server + Authorization Server 연동
+## 연동 구성
+* OAuth 2.0 Client를 애플리케이션으로, OAuth 2.0 Resource Server를 보호된 자원 서버로, 인가 서버를 Authorization Server로 실행한다.
+* 리소스 서버는 Album 자원과 Friend 자원으로 각 실행된다.
+
+## 처리 순서
+1. 클라이언트에서 인가 서버로, Authorization Code Grant 타입으로 토큰을 발급받고 이후 사용자 엔드포인트 요청으로 인증을 진행한다.
+2. 클라이언트에서 인증에 성공하면 Album 리소스 서버로 자원 요청을 한다.
+3. Album 리소스 서버에서 Friend 리소스 서버로 토큰을 가지고 내부 통신을 통해 자원을 요청한다.
+4. 최종적으로 반환 받은 Albums와 Friends 리소스를 클라이언트로 응답한다.
+
+```mermaid
+flowchart LR
+    user --> OAuth2Login
+    OAuth2Login --> OAuth2.0Client
+    OAuth2.0Client <--> AuthorizationServer
+    OAuth2.0Client <--> AlbumResourceServer
+    AlbumResourceServer <--> FriendResourceServer
+    FriendResourceServer <--> AuthorizationServer
+```

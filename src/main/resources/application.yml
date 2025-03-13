@@ -10,7 +10,7 @@ spring:
             client-secret: secret
           naver:
             client-id: secret
-            client-secret: l0Zsecretb1Z1Lv
+            client-secret: secret
             authorization-grant-type: authorization_code
             client-name: naver-client-app
             redirect-uri: http://localhost:8081/login/oauth2/code/naver
@@ -18,10 +18,11 @@ spring:
           kakao:
             client-id: secret
             client-secret: secret
+            client-authentication-method: client_secret_post
             authorization-grant-type: authorization_code
             client-name: client-app
             redirect-uri: http://localhost:8081/login/oauth2/code/kakao
-            scope: profile, openid
+            scope: profile_nickname, profile_image
         provider:
           naver:
             authorization-uri: https://nid.naver.com/oauth2.0/authorize
@@ -32,7 +33,7 @@ spring:
             issuer-uri: https://kauth.kakao.com
             authorization-uri: https://kauth.kakao.com/oauth/authorize
             token-uri: https://kauth.kakao.com/oauth/token
-            user-info-uri: https://kauth.kakao.com/oauth/userinfo
+            user-info-uri: https://kapi.kakao.com/v2/user/me
             jwk-set-uri: https://kauth.kakao.com/.well-known/jwks.json
             user-name-attribute: id
 server:
